@@ -51,7 +51,7 @@ disguise:
   # Le fait de pouvoir poser les têtes
   place-head: true
   # Le fait de rendre la tête au /undisguise et quand tu utilises une autre tête
-  give-back: false
+  give-back: true
   # Le fait de récupérer son skin au déco/reco
   restaure: true
 
@@ -59,7 +59,7 @@ disguise:
 ritual:
   # Le fait de pouvoir faire un rituel pour être proposé un pacte
   # Recréé du stream de Sohran: https://youtu.be/bwUXg9q5gBA (vidéo segmentée)
-  enabled: true
+  enabled: false
   # Le nombre maximum de têtes identiques autorisés
   dupelimit: 1
 

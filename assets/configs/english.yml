@@ -1,0 +1,210 @@
+# INFORMATION:
+#
+# 1.
+# Some of the messages are compatible with MiniMessage (when indicated)
+# Full guide: https://docs.advntr.dev/minimessage/format
+# You can preview them with the following site: https://webui.advntr.dev/
+#
+# 2.
+# Disguises rely on two plugins: EssentialsX (for the nickname) and
+# SkinsRestorer (for the skin). Both are needed to disguise a player.
+#
+# 3.
+# When a parameter ask you for a color, you can choose between
+# the ones directly in Bukkit ( https://hub.spigotmc.org/javadocs/bukkit/org/bukkit/Color.html )
+# or with an hexadecimal code ( https://htmlcolorcodes.com/ )
+#
+# 4.
+# Thank you for using this plugin! If you ever need help, have
+# a problem, or just want to talk to us, everything happens on my discord!
+# https://discord.gg/akgp49Q76M
+
+# Language of the plugin
+# Mostly applied to admin stuff
+# Values: french / english
+language: english
+
+
+drophead:
+  # Dropping heads on death
+  # This process can be replaced by another plugin or datapack
+  enabled: true
+  # The name of the heads
+  name: "§e%player%"
+  # Description of the heads
+  lore:
+    - "§8Do a §lRight-Click §8with this head to disguise as the player it represents"
+  # This makes it possible for heads to be stackable
+  # This works best with https://modrinth.com/datapack/stackable-heads
+  stackable: false
+
+
+disguise:
+  # Being able to place the heads
+  place-head: true
+  # Giving the head back when doing /undisguise and when using another head
+  give-back: false
+
+
+# Recovering your skin when reconnecting
+restaure: true
+
+
+ritual:
+  # Being able to do a ritual to be offered a pact
+  # Recreated from Sohran's stream: https://youtu.be/bwUXg9q5gBA (segmented video)
+  enabled: true
+  # The maximum number of identical heads allowed
+  dupelimit: 1
+
+  # The minimum & maximum time to start a ritual
+  # Example: 0 & 12000 will prevent it during the night
+  # Put 0 & 24000 to disable it
+  min-time: 0
+  max-time: 24000
+
+  # The name of the item dropped at the end of the ritual
+  name: "§4Demonic Pact"
+  # The lore of this book
+  lore:
+    - "§7by §cLucifer"
+  # The content of the 2 pages to perform the different pacts
+  # %command1% = Bloody Pact, %command2% = Forgotten Pact
+  pages:
+    - "<dark_red>Bloody Pact<br><br><red>This pact allows you to increase your life by <dark_red>5 <red>hearts, but your next death will cost you 3 heads...<br><dark_red><b>Will you accept it?<br><br><hover:show_text:\"<dark_purple>Click to accept this pact\"><click:run_command:%command1%><red><b>[Accept the Pact]"
+    - "<dark_gray>Forgotten Pact<br><br><gray>This pact allows you to <dark_gray><b>leave no head</b> <gray>behind you when you die, however for the rest of this life you will be weaker<br><dark_gray><b>Will you accept it?<br><br><hover:show_text:\"<dark_purple>Click to accept this pact\"><click:run_command:%command2%>[Accept the Pact]"
+
+  pactes:
+    bloody:
+      # Bloody Pact HP Boost
+      # HP = 2 x Hearts, i.e. 10 = 5 Hearts
+      hpboost: 10
+      # The number of heads that will drop on death
+      # This is enabled even when drophead is not
+      heads: 3
+    forgotten:
+      # The Forgotten Pact Weakness Level
+      weakness: 1
+
+  # The ritual animation settings
+  animation:
+    # Time increased in the world every 100ms (by default)
+    # Please use a divisor of your time-stop number: https://numberempire.com/18000
+    time-incr: 250
+    # The time at which the incrementation stop
+    # On the official, it seems to be 14000, on the original showcase 18000
+    time-stop: 18000
+    # The speed, in ticks, at which the incrementation does
+    # On the official it's 2, on the original showcase it's 3
+    time-speed: 2
+
+    # The color of the particles all around
+    color: "red"
+    # The size of the particles all around
+    size: 1
+
+    # The quantity of lightnings before the apparition of the sphere
+    lightning-quantity: 11
+    # The interval between each lightning spawn
+    lightning-interval: 2
+
+    sphere:
+      # Radius of the big blue sphere
+      radius: 2
+      # The number of particles constituting it
+      quantity: 750
+      # The color of the particles of the sphere
+      color: "aqua"
+      # The size of the particles of the sphere
+      size: 1
+      # The percentage chance of having a lava particle
+      lava-chance: 5
+      # If the lava particles should make a sound when dropping
+      lava-sound: false
+
+  # The settings of the animation when the pact is accepted
+  accepted:
+    # The radius of the lava sphere
+    lava-radius: 1.5
+    # The count of lava particles
+    lava-quantity: 300
+    # If the lava particles should make a sound when dropping
+    lava-sound: false
+    # The count of flame particles
+    flame-quantity: 500
+    # The speed/distance made by the flame particles
+    flame-speed: 0.5
+    # If the particles should be blue
+    flame-soul: true
+
+
+# Information:
+# There is no way to block the mace from being put into the enderchest (yet?)
+# if you don't want this to happen, use a third party plugin, or just ask your players
+macelimiter:
+  # Prevents too many masses from being crafted
+  # This does not apply to existing ones
+  enabled: true
+  # Limit of craftable masses
+  limit: 1
+  # Disallow putting the mace in the enderchest
+  no-enderchest: true
+
+
+# This does not change with the language parameter, and must be changed manually
+# They use MiniMessage
+# Keep it empty to not send anything
+messages:
+  # You just disguised yourself
+  # %player% = Original name, %nick% = Disguise
+  disguised: "<green>You're now disguised as <yellow>%nick%<br><click:run_command:/undisguise><yellow><b>[CLICK HERE]</b> <aqua>To remove your disguise or run /undisguise</click>"
+  # You just died in disguise
+  # %player% = Original name, %nick% = Disguise
+  lostdisguise: "<red>You lost your disguise when you died (rip bozo)"
+  # You just removed your disguise with /undisguise
+  # %player% = Original name, %nick% = Disguise
+  undisguise: "<green>You just took off your disguise"
+  # You are trying to do /undisguise without disguise
+  # %player% = Player name
+  nodisguise: "<red>You don't have a disguise"
+  # The ritual has just ended. This message is sent to all players
+  ritualdone: "<dark_red>The Pact of the Heads has been completed. FEAR ITS POWER IF YOU DARE!!"
+  # You chose the Bloody Pact
+  # %player% = Player name
+  chose-bloody: "<red>You accepted the pact, here is your due, <b>5</b> extra hearts, finally, <dark_red><b>until your next death"
+  # You chose the Forgotten Pact
+  # %player% = Player name
+  chose-forgotten: "<gray>You accepted the pact, here is your due, weakness <b>1</b>, but <dark_gray><b>your head will not fall"
+  # You already have a pact but you are trying to choose one
+  # %player% = Player name
+  already-chose: "<red>You have already chosen a pact"
+  # You died with the Bloody Pact
+  # %player% = Player name
+  death-bloody: "<red>You have lost the effects of your pact, if you are able to die with this gift, then perhaps you are not <dark_red><b>deserving of this power"
+  # You died with the Forgotten Pact
+  # %player% = Player name
+  # If anyone has the real message, please contact us on discord
+  death-forgotten: "<gray>You have lost the effects of your pact, but with that <dark_gray><b>your head has not fallen off"
+  # You can't start a ritual during this time
+  # %player% = Player name
+  ritual-wrong-time: "<red>You can't start the ritual for the moment, come back later"
+  # You crafted a mace (with mace-limiter enabled)
+  # %player% = Player name
+  # %limit% = Limit of maces craftable
+  # %old% = Previous number of maces crafted
+  # %now% = New number of maces crafted
+  craft-mace: "<green>You crafted a MACE, the limit is : %limit% copies"
+  # You log back in and get your disguise back (if restaure is enabled)
+  # %player% = Original name, %nick% = Disguise
+  restaure: ""
+
+
+# Auto-update is a module to automatically check for a new plugin update
+# This does not lag the server and is used to fix bugs, or add features
+autoupdate:
+  # Allow the plugin to automatically check for updates, and notify admins & console
+  fetch: true
+  # Attempt to automatically download and replace the plugin, without any action on your part
+  download: true
+
+metrics: true

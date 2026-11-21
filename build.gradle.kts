@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "im.ghosty.kamoof"
-version = "1.0"
+version = "1.0a"
 
 repositories {
     mavenCentral()

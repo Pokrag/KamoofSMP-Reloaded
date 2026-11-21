@@ -4,8 +4,10 @@ import im.ghosty.kamoof.KamoofPlugin;
 import im.ghosty.kamoof.features.Feature;
 import com.google.gson.*;
 import im.ghosty.kamoof.utils.*;
+import lombok.Getter;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
+import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -27,8 +29,12 @@ public final class UpdateChecker extends Feature {
 	private static final String RELEASES_PAGE = "https://github.com/" + REPOSITORY + "/releases";
 	private static final String USER_AGENT = REPOSITORY;
 	
+	@Getter
+	private static UpdateChecker instance;
+	
 	private final String currentVersion;
 	private boolean hasUpdate = false;
+	private boolean lastCheckFailed = false;
 	private String newVersion;
 	private String changelog;
 	private String downloads;
@@ -38,6 +44,7 @@ public final class UpdateChecker extends Feature {
 	private BukkitTask task;
 	
 	public UpdateChecker() {
+		instance = this;
 		currentVersion = KamoofPlugin.getInstance().getDescription().getVersion().trim().toLowerCase();
 	}
 	
@@ -70,6 +77,7 @@ public final class UpdateChecker extends Feature {
 	
 	public boolean checkForUpdate() {
 		try {
+			lastCheckFailed = false;
 			sendMessage("UPDATE_CHECKING");
 			HTTPUtils.Response response = HTTPUtils.get(RELEASE_API,
 				new HashMap<>() {{
@@ -120,9 +128,29 @@ public final class UpdateChecker extends Feature {
 			sendMessage("UPDATE_ALREADY_LAST");
 		} catch (Throwable exc) {
 			exc.printStackTrace();
+			lastCheckFailed = true;
 			sendMessage("UPDATE_CHECKER_FAIL");
 		}
 		return false;
+	}
+	
+	/**
+	 * Déclenche une vérification manuelle des mises à jour et informe l'expéditeur du résultat.
+	 *
+	 * @param sender La cible à prévenir
+	 */
+	public void checkForUpdate(CommandSender sender) {
+		Bukkit.getScheduler().runTaskAsynchronously(KamoofPlugin.getInstance(), () -> {
+			boolean update = checkForUpdate();
+			Bukkit.getScheduler().runTask(KamoofPlugin.getInstance(), () -> {
+				if (update && message != null)
+					sender.sendMessage(message);
+				else if (lastCheckFailed)
+					Lang.send(sender, "UPDATE_CHECKER_FAIL");
+				else
+					Lang.send(sender, "UPDATE_ALREADY_LAST");
+			});
+		});
 	}
 	
 	public boolean downloadUpdate(String url, boolean restart) {

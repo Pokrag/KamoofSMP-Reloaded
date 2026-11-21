@@ -3,6 +3,7 @@ package im.ghosty.kamoof.commands;
 import im.ghosty.kamoof.KamoofPlugin;
 import im.ghosty.kamoof.api.KamoofSMP;
 import im.ghosty.kamoof.features.other.JoinMessages;
+import im.ghosty.kamoof.features.other.UpdateChecker;
 import im.ghosty.kamoof.features.ritual.*;
 import im.ghosty.kamoof.utils.*;
 import org.bukkit.Bukkit;
@@ -81,6 +82,10 @@ public final class KamoofCMD implements CommandExecutor, TabCompleter {
 				getInstance().reloadConfig();
 				Lang.init();
 				Lang.send(player, "CONFIG_RELOADED");
+				return true;
+			}
+			case "update": {
+				UpdateChecker.getInstance().checkForUpdate(player);
 				return true;
 			}
 			case "setup": {
@@ -164,7 +169,7 @@ public final class KamoofCMD implements CommandExecutor, TabCompleter {
 		}
 	}
 	
-	private static final List<String> validArgs = Arrays.asList("info", "config", "reload", "setup", "givehead", "undisguise"),
+	private static final List<String> validArgs = Arrays.asList("info", "config", "reload", "update", "setup", "givehead", "undisguise"),
 		devArgs = new ArrayList<>(validArgs);
 	
 	static {

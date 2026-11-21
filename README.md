@@ -30,7 +30,7 @@ technique** vers les versions récentes de Paper, destiné à remplacer l'origin
 | Java | 17+ | **Java 25** |
 | Pseudo (déguisement) | NickAPI (intégré) | **EssentialsX** |
 | Skin + cape | NickAPI (intégré) | **SkinsRestorer** |
-| Auto-update | Pointe vers l'original | **Désactivé** |
+| Auto-update | Pointe vers Modrinth (original) | **GitHub Releases (ce dépôt)** |
 | Build | Gradle | Gradle 9.9.1 + Shadow 9.6.1 |
 
 **Pourquoi ces changements ?** NickAPI n'est plus maintenu pour les versions récentes de Minecraft (pas de
@@ -53,8 +53,10 @@ donc sur une solution hybride, **indépendante de toute dépendance « upstream 
 3. (Re)démarre le serveur.
 4. Vérifie qu'aucune erreur n'apparaît dans la console et que `/plugins` liste bien le plugin.
 
-> 💡 L'auto-update est **désactivé par défaut** (`autoupdate.fetch: false`). Ne le réactive pas : il pointe
-> vers la version **originale** du plugin, pas vers KamoofSMP Reloaded.
+> 💡 L'auto-update **interroge les [Releases GitHub](../../releases) de ce dépôt** (`autoupdate.fetch: true`).
+> Une mise à jour n'est signalée que si une Release (avec un `.jar` en pièce jointe) est publiée ici.
+> `autoupdate.download` est sur `false` par défaut : tu es averti (console + admins), sans remplacement
+> automatique du `.jar`.
 
 ## Compiler
 

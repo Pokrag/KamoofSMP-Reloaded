@@ -1,4 +1,5 @@
-# English config available at https://github.com/Ghosty920/KamoofSMP-S2/blob/main/assets/configs/english.yml
+# Configuration de KamoofSMP Reloaded
+# https://github.com/Pokrag/KamoofSMP-Reloaded
 #
 # INFORMATIONS:
 #
@@ -23,8 +24,8 @@
 #
 # 5.
 # Merci d'utiliser ce plugin ! Si jamais vous avez besoin d'aide, vous avez
-# un problème, ou juste envie de nous parler, tout se passe sur mon discord !
-# https://discord.gg/akgp49Q76M
+# un problème, ouvrez un ticket sur le dépôt GitHub du projet :
+# https://github.com/Pokrag/KamoofSMP-Reloaded/issues
 
 # Language of the plugin/Langue du plugin
 # Mostly applied to admin stuff/En majorité appliqué aux trucs admins
@@ -208,14 +209,15 @@ messages:
 
 # L'auto-update est un module permettant de check automatiquement pour une nouvelle mise à jour du plugin
 # Ceci Ne fait Pas lag le serveur et est utilisé pour corriger des bugs, ou ajouter des fonctionnalités
+# Les mises à jour sont récupérées depuis les "Releases" GitHub :
+# https://github.com/Pokrag/KamoofSMP-Reloaded/releases
 autoupdate:
   # Permettre au plugin de vérifier automatiquement pour des mises à jour, et prévenir les admins & la console
-  # DÉSACTIVÉ PAR DÉFAUT : ce projecteur pointe vers le plugin D'ORIGINE (Modrinth camouf2) et non vers
-  # KamoofSMP Reloaded. Le laisser sur false pour éviter toute confusion / tout écrasement.
-  fetch: false
+  # Une nouvelle version est détectée seulement si une Release GitHub (tag de version) est publiée.
+  fetch: true
   # Tenter de télécharger et de remplacer automatiquement le plugin, sans action de votre part
-  # ATTENTION: pointerait vers le plugin d'origine (Modrinth) et écraserait cette version portée.
-  # Laisser impérativement sur false.
+  # Le .jar est récupéré depuis la pièce jointe (.jar) de la dernière Release GitHub, puis un
+  # redémarrage du serveur est proposé. Laisser sur false pour être simplement averti (recommandé).
   download: false
 
 # Statistiques anonymes bStats.

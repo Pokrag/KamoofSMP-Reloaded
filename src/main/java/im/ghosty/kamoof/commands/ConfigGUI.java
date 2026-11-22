@@ -196,11 +196,11 @@ public final class ConfigGUI {
 		String self = KamoofSMP.getInstance().getName(player);
 		String nick = DisguiseManager.getNickname(player);
 		
-		setButtonFake(menu, 10, "MENU_FAKE_SELF_DISCONNECT", self, true, false);
-		setButtonFake(menu, 11, "MENU_FAKE_NICK_CONNECT", nick, false, true);
-		setButtonUndisguise(menu, 12);
-		setButtonFake(menu, 13, "MENU_FAKE_SELF_CONNECT", self, true, true);
-		setButtonFake(menu, 14, "MENU_FAKE_NICK_DISCONNECT", nick, false, false);
+		setButtonFake(menu, 11, "MENU_FAKE_SELF_DISCONNECT", self, true, false);
+		setButtonFake(menu, 12, "MENU_FAKE_NICK_CONNECT", nick, false, true);
+		setButtonUndisguise(menu, 13);
+		setButtonFake(menu, 14, "MENU_FAKE_SELF_CONNECT", self, true, true);
+		setButtonFake(menu, 15, "MENU_FAKE_NICK_DISCONNECT", nick, false, false);
 		
 		return menu;
 	}

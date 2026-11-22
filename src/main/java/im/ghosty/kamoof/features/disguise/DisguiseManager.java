@@ -2,6 +2,7 @@ package im.ghosty.kamoof.features.disguise;
 
 import com.earth2me.essentials.Essentials;
 import com.earth2me.essentials.User;
+import com.earth2me.essentials.utils.DateUtil;
 import im.ghosty.kamoof.KamoofPlugin;
 import im.ghosty.kamoof.api.KamoofSMP;
 import im.ghosty.kamoof.utils.Lang;
@@ -23,6 +24,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
 import java.io.File;
+import java.lang.management.ManagementFactory;
+import java.text.NumberFormat;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -112,30 +115,91 @@ public final class DisguiseManager {
 			Lang.send(player, "MENU_FAKE_NODISGUISE");
 			return;
 		}
-		broadcastFake(name, join);
+		broadcastFake(name, join, player);
 	}
 	
 	/**
 	 * Diffuse un faux message de connexion ou de déconnexion pour le pseudo donné.
 	 * <p>
 	 * Si EssentialsX a configuré un message personnalisé (<code>custom-join-message</code> /
-	 * <code>custom-quit-message</code> dans son <code>config.yml</code>), c'est ce message qui est utilisé.
+	 * <code>custom-quit-message</code> dans son <code>config.yml</code>), c'est ce message qui est utilisé,
+	 * et ses balises sont remplacées comme le ferait EssentialsX (cf. {@link #applyEssentialsPlaceholders}).
 	 * Sinon, on retombe sur les messages de langue du plugin.
 	 *
-	 * @param name Le pseudo à afficher
-	 * @param join <code>true</code> pour un message de connexion, <code>false</code> pour une déconnexion
+	 * @param name   Le pseudo à afficher
+	 * @param join   <code>true</code> pour un message de connexion, <code>false</code> pour une déconnexion
+	 * @param author Le joueur à l'origine du faux message (sert aux balises {ONLINE}/{UPTIME}/{PREFIX}/{SUFFIX})
 	 */
-	public static void broadcastFake(String name, boolean join) {
+	public static void broadcastFake(String name, boolean join, Player author) {
 		if (name == null || name.isEmpty())
 			return;
 		String custom = essentialsCustomMessage(join);
 		String raw = custom != null
-			? custom.replace("{USERNAME}", name).replace("{PLAYER}", name)
+			? applyEssentialsPlaceholders(custom, name, author)
 			: String.format(Lang.get(join ? "FAKE_CONNECT" : "FAKE_DISCONNECT"), name);
 		Component message = Message.deserialize(raw);
 		for (Player viewer : Bukkit.getOnlinePlayers())
 			viewer.sendMessage(message);
 		Bukkit.getConsoleSender().sendMessage(message);
+	}
+	
+	/**
+	 * Remplace les balises propres aux messages de connexion/déconnexion d'EssentialsX, afin de rester
+	 * compatible avec celles-ci (<code>{PLAYER}</code>, <code>{USERNAME}</code>, <code>{NICKNAME}</code>,
+	 * <code>{DISPLAYNAME}</code>, <code>{ONLINE}</code>, <code>{UPTIME}</code>, <code>{PREFIX}</code>,
+	 * <code>{SUFFIX}</code>).
+	 * <p>
+	 * Le pseudo affiché (<code>name</code>) est injecté à la place de toutes les balises de pseudo ;
+	 * les autres balises sont calculées à partir de l'état actuel du serveur, à l'instar d'EssentialsX.
+	 *
+	 * @param message Le message brut (issu de la config d'EssentialsX)
+	 * @param name    Le pseudo simulé
+	 * @param author  Le joueur à l'origine du faux message
+	 * @return Le message avec les balises remplacées
+	 */
+	private static String applyEssentialsPlaceholders(String message, String name, Player author) {
+		String result = message
+			.replace("{PLAYER}", name)
+			.replace("{DISPLAYNAME}", name)
+			.replace("{USERNAME}", name)
+			.replace("{NICKNAME}", name)
+			.replace("{ONLINE}", NumberFormat.getInstance().format(Bukkit.getOnlinePlayers().size()));
+		try {
+			result = result.replace("{UPTIME}", DateUtil.formatDateDiff(ManagementFactory.getRuntimeMXBean().getStartTime()));
+		} catch (Throwable exc) {
+		}
+		Plugin plugin = Bukkit.getPluginManager().getPlugin("Essentials");
+		if (plugin != null && author != null) {
+			try {
+				Object handler = plugin.getClass().getMethod("getPermissionsHandler").invoke(plugin);
+				if (handler != null) {
+					result = result
+						.replace("{PREFIX}", permissionsValue(handler, author, "getPrefix"))
+						.replace("{SUFFIX}", permissionsValue(handler, author, "getSuffix"));
+				}
+			} catch (Throwable exc) {
+			}
+		}
+		return result;
+	}
+	
+	/**
+	 * Récupère la valeur de {@code getPrefix}/{@code getSuffix} auprès du gestionnaire de permissions
+	 * d'EssentialsX, via réflexion pour rester tolérant vis-à-vis des différentes versions de l'API.
+	 *
+	 * @param handler Le gestionnaire de permissions
+	 * @param player  La cible
+	 * @param method  Le nom de la méthode ({@code getPrefix} ou {@code getSuffix})
+	 * @return La valeur (codes couleur convertis en <code>&amp;</code> pour {@link Message}), ou une chaîne vide si indisponible
+	 */
+	private static String permissionsValue(Object handler, Player player, String method) {
+		try {
+			Class<?> type = Class.forName("net.ess3.api.IPermissionsHandler");
+			Object value = type.getMethod(method, Player.class).invoke(handler, player);
+			return value == null ? "" : value.toString().replace('§', '&');
+		} catch (Throwable exc) {
+			return "";
+		}
 	}
 	
 	/**

@@ -24,3 +24,6 @@ permissions:
   kamoofsmp.head:
     description: Permet d'obtenir sa propre tête avec /myhead
     default: op
+  kamoofsmp.liarkit.free:
+    description: Rend toutes les actions de la Trousse du Menteur gratuites pour ce joueur
+    default: op

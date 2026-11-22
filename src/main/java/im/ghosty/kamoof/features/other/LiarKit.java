@@ -40,6 +40,9 @@ public final class LiarKit extends Feature {
 	@Getter
 	private static LiarKit instance;
 	
+	/** Permission rendant TOUTES les actions de la Trousse du Menteur gratuites (voir plugin.yml). */
+	public static final String FREE_PERMISSION = "kamoofsmp.liarkit.free";
+	
 	/** Déguisement (ou <code>null</code>) à restaurer à la fin du mode anonyme. */
 	private final Map<UUID, String> anonymousRestore = new ConcurrentHashMap<>();
 	/** Tâches terminant le mode anonyme. */
@@ -119,9 +122,16 @@ public final class LiarKit extends Feature {
 		return Math.max(0, KamoofPlugin.config().getDouble("liarkit.prices." + key));
 	}
 	
-	/** @return Le prix formaté (symbole monétaire inclus). */
-	public String priceLabel(String key) {
+	/** @return Le prix formaté (symbole monétaire inclus), ou « Gratuit » si le joueur a la permission. */
+	public String priceLabel(Player player, String key) {
+		if (player != null && player.hasPermission(FREE_PERMISSION))
+			return Lang.get("LIARKIT_FREE");
 		return EconomyHook.format(price(key));
+	}
+	
+	/** @return <code>true</code> si le joueur bénéficie de la gratuité totale (permission). */
+	public boolean isFree(Player player) {
+		return player != null && player.hasPermission(FREE_PERMISSION);
 	}
 	
 	/** @return Le solde formaté du joueur. */
@@ -691,6 +701,9 @@ public final class LiarKit extends Feature {
 	 */
 	private boolean charge(Player player, double amount) {
 		if (amount <= 0)
+			return true;
+		// Permission « tout gratuit » : aucune déduction, même si un prix est configuré.
+		if (isFree(player))
 			return true;
 		if (!EconomyHook.isAvailable()) {
 			Lang.send(player, "LIARKIT_NO_ECONOMY");

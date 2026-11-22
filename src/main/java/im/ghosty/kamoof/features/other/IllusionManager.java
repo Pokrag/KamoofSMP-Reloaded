@@ -27,6 +27,7 @@ import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Pig;
 import org.bukkit.entity.Player;
+import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -187,7 +188,8 @@ public final class IllusionManager {
 		
 		UUID cloneId = UUID.randomUUID();
 		int entityId = 1_000_000 + RANDOM.nextInt(1_000_000);
-		Location location = owner.getLocation().clone();
+		// Le clone doit apparaître DEVANT le joueur (et non superposé à lui, sinon il est invisible).
+		Location location = cloneLocation(owner);
 		Clone clone = new Clone(owner.getUniqueId(), cloneId, entityId, displayName(owner), texturesOf(owner), location, mobile);
 		CLONES.put(owner.getUniqueId(), clone);
 		
@@ -196,6 +198,19 @@ public final class IllusionManager {
 				spawnCloneTo(viewer, clone);
 		});
 		return cloneId;
+	}
+	
+	/** @return La position d'apparition du clone : juste devant le joueur, tourné vers lui. */
+	private static Location cloneLocation(Player owner) {
+		Location base = owner.getLocation();
+		Vector direction = base.getDirection().setY(0);
+		if (direction.lengthSquared() < 1.0E-4)
+			direction = new Vector(0, 0, 1);
+		Location location = base.clone().add(direction.normalize().multiply(1.5));
+		// Le clone fait face au joueur (il le regarde).
+		location.setYaw(base.getYaw() + 180f);
+		location.setPitch(0f);
+		return location;
 	}
 	
 	private static void spawnCloneTo(Player viewer, Clone clone) {

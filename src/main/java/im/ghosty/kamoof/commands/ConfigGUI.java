@@ -229,18 +229,18 @@ public final class ConfigGUI {
 		String silenceDuration = LiarKit.durationLabel(kit.silenceDuration());
 		String pigDuration = LiarKit.durationLabel(kit.pigDuration());
 		
-		setButtonLiar(menu, 10, Material.PLAYER_HEAD, "LIARKIT_BTN_ANONYMOUS", anonymousDuration, kit.priceLabel("anonymous"), balance, kit::buyAnonymous);
-		setButtonLiar(menu, 11, Material.ENDER_EYE, "LIARKIT_BTN_TAB", tabDuration, kit.priceLabel("tab"), balance, kit::buyTabVanish);
-		setButtonLiar(menu, 12, Material.LIME_DYE, "LIARKIT_BTN_FAKE_JOIN", "", kit.priceLabel("fake-join"), balance, clicker -> kit.fakeMessage(clicker, true));
-		setButtonLiar(menu, 13, Material.GRAY_DYE, "LIARKIT_BTN_FAKE_QUIT", "", kit.priceLabel("fake-quit"), balance, clicker -> kit.fakeMessage(clicker, false));
-		setButtonLiar(menu, 14, Material.WITHER_SKELETON_SKULL, "LIARKIT_BTN_FAKE_DEATH", "", kit.priceLabel("fake-death"), balance, kit::fakeDeath);
-		setButtonLiar(menu, 15, Material.KNOWLEDGE_BOOK, "LIARKIT_BTN_FAKE_ADVANCEMENT", "", kit.priceLabel("fake-advancement"), balance, kit::fakeAdvancement);
-		setButtonLiar(menu, 16, Material.ARMOR_STAND, "LIARKIT_BTN_CLONE", cloneDuration, kit.priceLabel("clone"), balance, clicker -> kit.buyClone(clicker, false));
-		setButtonLiar(menu, 20, Material.SLIME_BALL, "LIARKIT_BTN_GHOST_JOIN", ghostDuration, kit.priceLabel("ghost-join"), balance, kit::buyGhostJoin);
-		setButtonLiar(menu, 21, Material.SKELETON_SKULL, "LIARKIT_BTN_CLONE_MOBILE", cloneDuration, kit.priceLabel("clone-mobile"), balance, clicker -> kit.buyClone(clicker, true));
-		setButtonLiar(menu, 22, Material.BELL, "LIARKIT_BTN_SILENCE", silenceDuration, kit.priceLabel("silence"), balance, kit::buySilence);
-		setButtonLiar(menu, 23, Material.CREEPER_HEAD, "LIARKIT_BTN_PIGS", pigDuration, kit.priceLabel("pigs-creepers"), balance, kit::promptPigsTarget);
-		setButtonLiar(menu, 24, Material.GHAST_TEAR, "LIARKIT_BTN_GHOST", ghostDuration, kit.priceLabel("ghost"), balance, kit::buyVanish);
+		setButtonLiar(menu, 10, Material.PLAYER_HEAD, "LIARKIT_BTN_ANONYMOUS", anonymousDuration, kit.priceLabel(player, "anonymous"), balance, kit::buyAnonymous);
+		setButtonLiar(menu, 11, Material.ENDER_EYE, "LIARKIT_BTN_TAB", tabDuration, kit.priceLabel(player, "tab"), balance, kit::buyTabVanish);
+		setButtonLiar(menu, 12, Material.LIME_DYE, "LIARKIT_BTN_FAKE_JOIN", "", kit.priceLabel(player, "fake-join"), balance, clicker -> kit.fakeMessage(clicker, true));
+		setButtonLiar(menu, 13, Material.GRAY_DYE, "LIARKIT_BTN_FAKE_QUIT", "", kit.priceLabel(player, "fake-quit"), balance, clicker -> kit.fakeMessage(clicker, false));
+		setButtonLiar(menu, 14, Material.WITHER_SKELETON_SKULL, "LIARKIT_BTN_FAKE_DEATH", "", kit.priceLabel(player, "fake-death"), balance, kit::fakeDeath);
+		setButtonLiar(menu, 15, Material.KNOWLEDGE_BOOK, "LIARKIT_BTN_FAKE_ADVANCEMENT", "", kit.priceLabel(player, "fake-advancement"), balance, kit::fakeAdvancement);
+		setButtonLiar(menu, 16, Material.ARMOR_STAND, "LIARKIT_BTN_CLONE", cloneDuration, kit.priceLabel(player, "clone"), balance, clicker -> kit.buyClone(clicker, false));
+		setButtonLiar(menu, 20, Material.SLIME_BALL, "LIARKIT_BTN_GHOST_JOIN", ghostDuration, kit.priceLabel(player, "ghost-join"), balance, kit::buyGhostJoin);
+		setButtonLiar(menu, 21, Material.SKELETON_SKULL, "LIARKIT_BTN_CLONE_MOBILE", cloneDuration, kit.priceLabel(player, "clone-mobile"), balance, clicker -> kit.buyClone(clicker, true));
+		setButtonLiar(menu, 22, Material.BELL, "LIARKIT_BTN_SILENCE", silenceDuration, kit.priceLabel(player, "silence"), balance, kit::buySilence);
+		setButtonLiar(menu, 23, Material.CREEPER_HEAD, "LIARKIT_BTN_PIGS", pigDuration, kit.priceLabel(player, "pigs-creepers"), balance, kit::promptPigsTarget);
+		setButtonLiar(menu, 24, Material.GHAST_TEAR, "LIARKIT_BTN_GHOST", ghostDuration, kit.priceLabel(player, "ghost"), balance, kit::buyVanish);
 		
 		return menu;
 	}

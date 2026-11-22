@@ -82,7 +82,7 @@ public final class DisguiseManager {
 			undisguise(player);
 			return;
 		}
-		applyNickname(player, name);
+		applyNickname(player, name, false);
 		applySkin(player, name);
 	}
 	
@@ -96,7 +96,7 @@ public final class DisguiseManager {
 		if (getNickname(player) == null)
 			return;
 		
-		clearNickname(player);
+		clearNickname(player, false);
 		clearSkin(player);
 	}
 	
@@ -137,6 +137,43 @@ public final class DisguiseManager {
 		String raw = custom != null
 			? applyEssentialsPlaceholders(custom, name, author)
 			: String.format(Lang.get(join ? "FAKE_CONNECT" : "FAKE_DISCONNECT"), name);
+		broadcastRaw(raw);
+	}
+	
+	/**
+	 * Diffuse un faux message de mort avec le pseudo donné.
+	 *
+	 * @param name   Le pseudo affiché
+	 * @param author Le joueur à l'origine du faux message (peut être <code>null</code>)
+	 */
+	public static void broadcastFakeDeath(String name, Player author) {
+		if (name == null || name.isEmpty())
+			return;
+		broadcastRaw(String.format(Lang.get("FAKE_DEATH"), name));
+	}
+	
+	/**
+	 * Diffuse un faux message de progression (advancement) avec le pseudo et le nom du progrès donnés.
+	 *
+	 * @param name        Le pseudo affiché
+	 * @param advancement Le nom du progrès
+	 * @param author      Le joueur à l'origine du faux message (peut être <code>null</code>)
+	 */
+	public static void broadcastFakeAdvancement(String name, String advancement, Player author) {
+		if (name == null || name.isEmpty())
+			return;
+		broadcastRaw(String.format(Lang.get("FAKE_ADVANCEMENT"), name, advancement));
+	}
+	
+	/**
+	 * Envoie un message brut (MiniMessage + codes couleurs <code>&amp;</code>) à tous les joueurs
+	 * et à la console.
+	 *
+	 * @param raw Le message brut
+	 */
+	private static void broadcastRaw(String raw) {
+		if (raw == null || raw.isEmpty())
+			return;
 		Component message = Message.deserialize(raw);
 		for (Player viewer : Bukkit.getOnlinePlayers())
 			viewer.sendMessage(message);
@@ -257,16 +294,22 @@ public final class DisguiseManager {
 			clearName(player);
 			return;
 		}
-		applyNickname(player, name);
+		// Mode « Anonymous » : on force l'affichage (TAB + nametag) sans condition, sinon un
+		// pseudo précédent (déguisement, cosmétiques EssentialsX...) resterait affiché EN PLUS.
+		applyNickname(player, name, true);
 	}
-	
+
 	/**
 	 * Retire le pseudo du joueur (retour à son vrai pseudo) <b>sans toucher à son skin</b>.
 	 *
 	 * @param player La cible
 	 */
 	public static void clearName(Player player) {
-		clearNickname(player);
+		if (getNickname(player) == null)
+			return;
+		// Même raison que {@link #applyName} : on force le retour au vrai pseudo pour ne
+		// laisser aucun résidu « Anonymous » dans le TAB ou le nametag.
+		clearNickname(player, true);
 	}
 	
 	/**
@@ -277,7 +320,7 @@ public final class DisguiseManager {
 		return essentials == null ? null : essentials.getUser(player);
 	}
 	
-	private static void applyNickname(Player player, String name) {
+	private static void applyNickname(Player player, String name, boolean force) {
 		if (!player.isOnline())
 			return;
 		
@@ -297,10 +340,13 @@ public final class DisguiseManager {
 		// 3) On force l'affichage (TAB) si EssentialsX ne l'a pas fait.
 		//    Par défaut, EssentialsX ne modifie PAS la tab-list (change-playerlist: false),
 		//    ce qui provoquait l'absence du pseudo dans le menu TAB.
-		forceDisplayIfMissing(player, name);
+		if (force)
+			forceDisplay(player, name);
+		else
+			forceDisplayIfMissing(player, name);
 	}
 	
-	private static void clearNickname(Player player) {
+	private static void clearNickname(Player player, boolean force) {
 		if (!player.isOnline())
 			return;
 		
@@ -314,7 +360,25 @@ public final class DisguiseManager {
 		
 		// on remet le vrai nom au-dessus de la tête, puis dans la tab-list si nécessaire
 		NametagManager.setNickname(player.getUniqueId(), null);
-		forceDisplayIfMissing(player, player.getName());
+		if (force)
+			forceDisplay(player, player.getName());
+		else
+			forceDisplayIfMissing(player, player.getName());
+	}
+	
+	/**
+	 * Force l'affichage du pseudo sur le <b>menu TAB</b> et le <b>nametag au-dessus de la tête</b>,
+	 * <b>sans condition</b>. Utilisé par le mode « Anonymous » (Trousse du Menteur) pour garantir
+	 * que le pseudo précédent ne reste pas affiché en plus du nouveau.
+	 *
+	 * @param player La cible
+	 * @param name   Le nom à afficher
+	 */
+	private static void forceDisplay(Player player, String name) {
+		if (!player.isOnline())
+			return;
+		player.playerListName(Component.text(name));
+		player.displayName(Component.text(name));
 	}
 	
 	/**

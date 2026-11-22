@@ -10,11 +10,13 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -22,9 +24,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * La <b>Trousse du Menteur</b> : un ensemble d'actions payantes (via <b>Vault</b>) permettant de
  * tromper les autres joueurs, accessibles depuis <code>/camouf menu</code>.
  * <ul>
- *     <li><b>Anonymat</b> : transforme temporairement le joueur en « Anonymous » ;</li>
+ *     <li><b>Anonymat</b> : transforme temporairement le joueur en « Anonymous » (chat inclus) ;</li>
  *     <li><b>Disparition du TAB</b> : retire le joueur de la liste des joueurs (même sans déguisement) ;</li>
- *     <li><b>Faux messages</b> : diffuse un faux message de connexion/déconnexion (même sans déguisement).</li>
+ *     <li><b>Faux messages</b> : connexion, déconnexion, mort et progression ;</li>
+ *     <li><b>Connexion fantôme</b> : fait croire à une connexion qui se déconnecte toute seule ;</li>
+ *     <li><b>Fantôme</b> : rend le joueur totalement invisible (vanish).</li>
  * </ul>
  * Ces actions ne modifient jamais le déguisement « réel » du joueur : un éventuel déguisement en
  * cours est restauré à la fin de l'effet.
@@ -42,6 +46,14 @@ public final class LiarKit extends Feature {
 	private final Map<UUID, BukkitTask> anonymousTasks = new ConcurrentHashMap<>();
 	/** Tâches ré-appliquant/terminant la disparition du TAB. */
 	private final Map<UUID, BukkitTask> tabTasks = new ConcurrentHashMap<>();
+	/** Tâches déconnectant automatiquement la connexion fantôme. */
+	private final Map<UUID, BukkitTask> ghostTasks = new ConcurrentHashMap<>();
+	/** Tâches ré-appliquant/terminant le mode fantôme (vanish). */
+	private final Map<UUID, BukkitTask> vanishTasks = new ConcurrentHashMap<>();
+	/** Auteur (pseudo affiché) de la connexion fantôme en cours, pour la déconnexion automatique. */
+	private final Map<UUID, String> ghostNames = new ConcurrentHashMap<>();
+	/** Joueurs actuellement en mode fantôme (vanish). */
+	private final Set<UUID> vanished = ConcurrentHashMap.newKeySet();
 	
 	public LiarKit() {
 		instance = this;
@@ -68,7 +80,13 @@ public final class LiarKit extends Feature {
 			cancel(anonymousTasks, uuid);
 		for (UUID uuid : tabTasks.keySet())
 			cancel(tabTasks, uuid);
+		for (UUID uuid : ghostTasks.keySet())
+			cancel(ghostTasks, uuid);
+		for (UUID uuid : vanishTasks.keySet())
+			cancel(vanishTasks, uuid);
 		anonymousRestore.clear();
+		ghostNames.clear();
+		vanished.clear();
 	}
 	
 	// ---------------------------------------------------------------------
@@ -105,6 +123,16 @@ public final class LiarKit extends Feature {
 		return Math.max(1, KamoofPlugin.config().getInt("liarkit.tab-duration", 60));
 	}
 	
+	/** @return La durée (en secondes) de la connexion fantôme et du mode fantôme. */
+	public int ghostDuration() {
+		return Math.max(1, KamoofPlugin.config().getInt("liarkit.ghost-duration", 60));
+	}
+	
+	/** @return Le nom du faux progrès affiché. */
+	public String advancementName() {
+		return KamoofPlugin.config().getString("liarkit.advancement-name", "Progrès Secret");
+	}
+	
 	/** @return Une durée lisible, p. ex. « 1 min 30 s ». */
 	public static String durationLabel(int seconds) {
 		int minutes = seconds / 60;
@@ -114,6 +142,12 @@ public final class LiarKit extends Feature {
 		if (rest == 0)
 			return minutes + " min";
 		return minutes + " min " + rest + " s";
+	}
+	
+	/** @return Le pseudo affiché actuel du joueur (déguisement s'il y en a un, sinon vrai pseudo). */
+	private static String displayName(Player player) {
+		String name = DisguiseManager.getNickname(player);
+		return (name == null || name.isEmpty()) ? player.getName() : name;
 	}
 	
 	// ---------------------------------------------------------------------
@@ -224,10 +258,158 @@ public final class LiarKit extends Feature {
 		if (!charge(player, price(join ? "fake-join" : "fake-quit")))
 			return;
 		
-		String name = DisguiseManager.getNickname(player);
+		DisguiseManager.broadcastFake(displayName(player), join, player);
+	}
+	
+	/**
+	 * Diffuse un faux message de mort avec le pseudo affiché actuel du joueur.
+	 *
+	 * @param player La cible
+	 */
+	public void fakeDeath(Player player) {
+		if (!check(player))
+			return;
+		if (!charge(player, price("fake-death")))
+			return;
+		DisguiseManager.broadcastFakeDeath(displayName(player), player);
+	}
+	
+	/**
+	 * Diffuse un faux message de progression (advancement) avec le pseudo affiché actuel du joueur.
+	 *
+	 * @param player La cible
+	 */
+	public void fakeAdvancement(Player player) {
+		if (!check(player))
+			return;
+		if (!charge(player, price("fake-advancement")))
+			return;
+		DisguiseManager.broadcastFakeAdvancement(displayName(player), advancementName(), player);
+	}
+	
+	/**
+	 * Fait croire à la connexion du joueur (pseudo affiché actuel). Le joueur « fantôme » se
+	 * déconnecte automatiquement au bout de {@link #ghostDuration()} secondes, sauf si l'action
+	 * est rachetée entre-temps (renouvellement : la déconnexion est repoussée, sans nouveau message
+	 * de connexion).
+	 *
+	 * @param player La cible
+	 */
+	public void buyGhostJoin(Player player) {
+		if (!check(player))
+			return;
+		if (!charge(player, price("ghost-join")))
+			return;
+		
+		UUID uuid = player.getUniqueId();
+		String name = displayName(player);
+		boolean renewed = ghostNames.containsKey(uuid);
+		ghostNames.put(uuid, name);
+		// on ne rediffuse le message de connexion que lors du premier achat
+		if (!renewed)
+			DisguiseManager.broadcastFake(name, true, player);
+		
+		cancel(ghostTasks, uuid);
+		int duration = ghostDuration();
+		ghostTasks.put(uuid, Bukkit.getScheduler().runTaskLater(KamoofPlugin.getInstance(),
+			() -> endGhostJoin(uuid), duration * 20L));
+		Lang.send(player, renewed ? "LIARKIT_GHOST_RENEWED" : "LIARKIT_GHOST_ON", durationLabel(duration));
+	}
+	
+	private void endGhostJoin(UUID uuid) {
+		cancel(ghostTasks, uuid);
+		String name = ghostNames.remove(uuid);
 		if (name == null || name.isEmpty())
-			name = player.getName();
-		DisguiseManager.broadcastFake(name, join, player);
+			return;
+		Player player = Bukkit.getPlayer(uuid);
+		DisguiseManager.broadcastFake(name, false, player);
+		if (player != null && player.isOnline())
+			Lang.send(player, "LIARKIT_GHOST_OFF");
+	}
+	
+	/**
+	 * Rend le joueur totalement invisible (mode <b>fantôme</b>) : il disparaît pour tous les autres
+	 * joueurs (entité + LISTE des joueurs) et laisse croire qu'il s'est déconnecté. Le mode se
+	 * termine automatiquement au bout de {@link #ghostDuration()} secondes.
+	 *
+	 * @param player La cible
+	 */
+	public void buyVanish(Player player) {
+		if (!check(player))
+			return;
+		if (!NametagManager.isAvailable()) {
+			Lang.send(player, "LIARKIT_NO_PACKETEVENTS");
+			return;
+		}
+		if (!charge(player, price("ghost")))
+			return;
+		
+		UUID uuid = player.getUniqueId();
+		vanished.add(uuid);
+		applyVanish(player);
+		DisguiseManager.broadcastFake(displayName(player), false, player);
+		
+		int duration = ghostDuration();
+		cancel(vanishTasks, uuid);
+		vanishTasks.put(uuid, Bukkit.getScheduler().runTaskTimer(KamoofPlugin.getInstance(), new Runnable() {
+			private int left = duration;
+			
+			@Override
+			public void run() {
+				Player online = Bukkit.getPlayer(uuid);
+				if (online == null || !online.isOnline()) {
+					cancel(vanishTasks, uuid);
+					return;
+				}
+				if (left <= 0) {
+					endVanish(uuid);
+					return;
+				}
+				// ré-appliqué chaque seconde pour rattraper les joueurs qui se connectent entre-temps
+				applyVanish(online);
+				left--;
+			}
+		}, 20L, 20L));
+		Lang.send(player, "LIARKIT_VANISH_ON", durationLabel(duration));
+	}
+	
+	private void applyVanish(Player player) {
+		for (Player viewer : Bukkit.getOnlinePlayers())
+			if (!viewer.equals(player))
+				viewer.hidePlayer(KamoofPlugin.getInstance(), player);
+		NametagManager.setTabListed(player, false);
+	}
+	
+	private void endVanish(UUID uuid) {
+		cancel(vanishTasks, uuid);
+		if (!vanished.remove(uuid))
+			return;
+		Player player = Bukkit.getPlayer(uuid);
+		if (player == null || !player.isOnline())
+			return;
+		for (Player viewer : Bukkit.getOnlinePlayers())
+			if (!viewer.equals(player))
+				viewer.showPlayer(KamoofPlugin.getInstance(), player);
+		NametagManager.setTabListed(player, true);
+		DisguiseManager.broadcastFake(displayName(player), true, player);
+		Lang.send(player, "LIARKIT_VANISH_OFF");
+	}
+	
+	/**
+	 * Chat anonyme : tant que le joueur est en mode « Anonymous » (Trousse du Menteur), son message
+	 * est signé du pseudo anonyme au lieu de son vrai pseudo.
+	 *
+	 * @param event L'événement de chat
+	 */
+	@EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+	public void onChat(AsyncPlayerChatEvent event) {
+		Player player = event.getPlayer();
+		if (!anonymousRestore.containsKey(player.getUniqueId()))
+			return;
+		String anon = anonymousName();
+		String format = event.getFormat();
+		if (format != null && format.contains(player.getName()))
+			event.setFormat(format.replace(player.getName(), anon));
 	}
 	
 	/**
@@ -288,6 +470,12 @@ public final class LiarKit extends Feature {
 			cancel(tabTasks, uuid);
 			NametagManager.setTabListed(player, true);
 		}
+		if (vanished.remove(uuid)) {
+			cancel(vanishTasks, uuid);
+			NametagManager.setTabListed(player, true);
+		}
+		// La connexion fantôme continue même après une vraie déconnexion : le « fantôme » doit
+		// finir par se déconnecter tout seul (c'est tout l'intérêt de l'illusion).
 	}
 	
 	/**
@@ -300,6 +488,12 @@ public final class LiarKit extends Feature {
 		String nick = DisguiseManager.getNickname(player);
 		if (nick != null && nick.equals(anonymousName()) && !anonymousRestore.containsKey(player.getUniqueId()))
 			DisguiseManager.clearName(player);
+		// Un joueur en mode fantôme doit rester invisible pour les nouveaux arrivants.
+		for (UUID uuid : vanished) {
+			Player ghost = Bukkit.getPlayer(uuid);
+			if (ghost != null && !ghost.equals(player))
+				player.hidePlayer(KamoofPlugin.getInstance(), ghost);
+		}
 	}
 	
 }

@@ -173,12 +173,22 @@ liarkit:
   anonymous-duration: 60
   # Durée (en secondes) de la disparition de la liste des joueurs (TAB)
   tab-duration: 60
+  # Durée (en secondes) de la connexion fantôme et du mode fantôme (vanish)
+  # La connexion fantôme peut être renouvelée (rachetée) pour repousser la déconnexion automatique
+  ghost-duration: 60
+  # Le nom du faux progrès (advancement) affiché par « Faux progrès »
+  advancement-name: "Progrès Secret"
   # Les prix de chaque action (0 = gratuit)
   prices:
     anonymous: 500.0
     tab: 300.0
     fake-join: 150.0
     fake-quit: 150.0
+    fake-death: 150.0
+    fake-advancement: 200.0
+    ghost-join: 250.0
+    # Le mode fantôme (invisibilité totale) est volontairement très cher
+    ghost: 5000.0
 
 
 # Ceci ne change pas avec le paramètre language, et doit être modifié manuellement

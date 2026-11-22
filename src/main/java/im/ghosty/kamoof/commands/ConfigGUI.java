@@ -224,11 +224,16 @@ public final class ConfigGUI {
 		String balance = kit.balanceLabel(player);
 		String anonymousDuration = LiarKit.durationLabel(kit.anonymousDuration());
 		String tabDuration = LiarKit.durationLabel(kit.tabDuration());
+		String ghostDuration = LiarKit.durationLabel(kit.ghostDuration());
 		
 		setButtonLiar(menu, 10, Material.PLAYER_HEAD, "LIARKIT_BTN_ANONYMOUS", anonymousDuration, kit.priceLabel("anonymous"), balance, kit::buyAnonymous);
-		setButtonLiar(menu, 12, Material.ENDER_EYE, "LIARKIT_BTN_TAB", tabDuration, kit.priceLabel("tab"), balance, kit::buyTabVanish);
-		setButtonLiar(menu, 14, Material.LIME_DYE, "LIARKIT_BTN_FAKE_JOIN", "", kit.priceLabel("fake-join"), balance, clicker -> kit.fakeMessage(clicker, true));
-		setButtonLiar(menu, 16, Material.GRAY_DYE, "LIARKIT_BTN_FAKE_QUIT", "", kit.priceLabel("fake-quit"), balance, clicker -> kit.fakeMessage(clicker, false));
+		setButtonLiar(menu, 11, Material.ENDER_EYE, "LIARKIT_BTN_TAB", tabDuration, kit.priceLabel("tab"), balance, kit::buyTabVanish);
+		setButtonLiar(menu, 12, Material.LIME_DYE, "LIARKIT_BTN_FAKE_JOIN", "", kit.priceLabel("fake-join"), balance, clicker -> kit.fakeMessage(clicker, true));
+		setButtonLiar(menu, 13, Material.GRAY_DYE, "LIARKIT_BTN_FAKE_QUIT", "", kit.priceLabel("fake-quit"), balance, clicker -> kit.fakeMessage(clicker, false));
+		setButtonLiar(menu, 14, Material.WITHER_SKELETON_SKULL, "LIARKIT_BTN_FAKE_DEATH", "", kit.priceLabel("fake-death"), balance, kit::fakeDeath);
+		setButtonLiar(menu, 15, Material.KNOWLEDGE_BOOK, "LIARKIT_BTN_FAKE_ADVANCEMENT", "", kit.priceLabel("fake-advancement"), balance, kit::fakeAdvancement);
+		setButtonLiar(menu, 20, Material.SLIME_BALL, "LIARKIT_BTN_GHOST_JOIN", ghostDuration, kit.priceLabel("ghost-join"), balance, kit::buyGhostJoin);
+		setButtonLiar(menu, 24, Material.GHAST_TEAR, "LIARKIT_BTN_GHOST", ghostDuration, kit.priceLabel("ghost"), balance, kit::buyVanish);
 		
 		return menu;
 	}

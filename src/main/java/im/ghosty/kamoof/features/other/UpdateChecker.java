@@ -187,9 +187,10 @@ public final class UpdateChecker extends Feature {
 	// Applique la mise à jour : recharge à chaud via PlugManX, sinon prévient qu'un redémarrage est requis.
 	private void applyUpdate(CommandSender sender) {
 		String pluginName = KamoofPlugin.getInstance().getDescription().getName();
+		String releaseUrl = RELEASES_PAGE + "/tag/v" + newVersion;
 		
 		if (isPlugManAvailable()) {
-			Lang.send(sender, "UPDATE_PLUGMAN_RELOADING");
+			Lang.send(sender, "UPDATE_PLUGMAN_RELOADING", newVersion, releaseUrl);
 			CommandSender console = Bukkit.getConsoleSender();
 			// PlugManX recharge le jar : on décharge puis on recharge le plugin.
 			Bukkit.dispatchCommand(console, "plugman unload " + pluginName);
@@ -199,7 +200,7 @@ public final class UpdateChecker extends Feature {
 		
 		showDownloadedMessage();
 		sender.sendMessage(this.message);
-		Lang.send(sender, "UPDATE_RESTART_REQUIRED");
+		Lang.send(sender, "UPDATE_RESTART_REQUIRED", newVersion, releaseUrl);
 	}
 	
 	public boolean downloadUpdate(String url, boolean restart) {

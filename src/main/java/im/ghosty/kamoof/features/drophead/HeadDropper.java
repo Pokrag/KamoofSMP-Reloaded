@@ -4,6 +4,7 @@ import im.ghosty.kamoof.KamoofPlugin;
 import im.ghosty.kamoof.api.KamoofSMP;
 import im.ghosty.kamoof.features.Feature;
 import im.ghosty.kamoof.features.ritual.RitualHandler;
+import org.bukkit.GameRule;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.entity.PlayerDeathEvent;
@@ -33,13 +34,31 @@ public final class HeadDropper extends Feature {
 			if (pacte.equalsIgnoreCase("1")) {
 				ItemStack skull = SkullManager.getSkull(KamoofSMP.getInstance().getName(player));
 				skull.setAmount(KamoofPlugin.config().getInt("ritual.pactes.bloody.heads"));
-				event.getDrops().add(skull);
+				drop(event, player, skull);
 				return;
 			}
 		}
 		if (KamoofPlugin.config().getBoolean("drophead.enabled")) {
-			event.getDrops().add(SkullManager.getSkull(KamoofSMP.getInstance().getName(player)));
+			drop(event, player, SkullManager.getSkull(KamoofSMP.getInstance().getName(player)));
 		}
+	}
+	
+	/**
+	 * Fait tomber la tête du joueur à sa mort.
+	 * <p>
+	 * La gamerule <code>keepInventory</code> est une règle <b>différente</b> du drop de tête : quand elle est
+	 * activée, les items de l'inventaire ne tombent pas au sol, mais la tête doit tout de même tomber. On la
+	 * dépose donc nous-mêmes dans le monde au lieu de la confier aux drops de la mort.
+	 *
+	 * @param event  La mort du joueur
+	 * @param player Le joueur mort
+	 * @param skull  La tête à faire tomber
+	 */
+	private static void drop(PlayerDeathEvent event, Player player, ItemStack skull) {
+		if (Boolean.TRUE.equals(player.getWorld().getGameRuleValue(GameRule.KEEP_INVENTORY)))
+			player.getWorld().dropItemNaturally(player.getLocation(), skull);
+		else
+			event.getDrops().add(skull);
 	}
 	
 }

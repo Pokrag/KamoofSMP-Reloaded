@@ -132,7 +132,13 @@ public final class NametagManager {
 		} else {
 			NICKNAMES.put(uuid, nickname);
 		}
-		refresh(uuid);
+		try {
+			refresh(uuid);
+		} catch (Throwable exc) {
+			// PacketEvents absent/indisponible : on ne doit JAMAIS casser le déguisement
+			// (pseudo EssentialsX + skin SkinsRestorer) à cause du nametag.
+			logError("Nametag au-dessus de la tête indisponible : " + exc);
+		}
 	}
 	
 	/** @return Le pseudo déguisé mémorisé d'un joueur, ou <code>null</code>. */

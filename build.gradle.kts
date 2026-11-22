@@ -44,8 +44,8 @@ dependencies {
     implementation("net.wesjd:anvilgui:1.10.12-SNAPSHOT")
 
 
-    compileOnly("org.projectlombok:lombok:1.18.44")
-    annotationProcessor("org.projectlombok:lombok:1.18.44")
+    compileOnly("org.projectlombok:lombok:1.18.48")
+    annotationProcessor("org.projectlombok:lombok:1.18.48")
 }
 
 java {

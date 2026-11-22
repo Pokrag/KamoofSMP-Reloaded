@@ -17,8 +17,8 @@ dependencies {
     compileOnly("io.papermc.paper:paper-api:26.3.build.257-stable")
 
     implementation("org.jetbrains:annotations:26.0.2")
-    compileOnly("org.projectlombok:lombok:1.18.42")
-    annotationProcessor("org.projectlombok:lombok:1.18.42")
+    compileOnly("org.projectlombok:lombok:1.18.48")
+    annotationProcessor("org.projectlombok:lombok:1.18.48")
 }
 
 java {

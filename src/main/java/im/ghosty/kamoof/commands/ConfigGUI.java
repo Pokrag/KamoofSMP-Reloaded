@@ -239,7 +239,7 @@ public final class ConfigGUI {
 		setButtonLiar(menu, 20, Material.SLIME_BALL, "LIARKIT_BTN_GHOST_JOIN", ghostDuration, kit.priceLabel("ghost-join"), balance, kit::buyGhostJoin);
 		setButtonLiar(menu, 21, Material.SKELETON_SKULL, "LIARKIT_BTN_CLONE_MOBILE", cloneDuration, kit.priceLabel("clone-mobile"), balance, clicker -> kit.buyClone(clicker, true));
 		setButtonLiar(menu, 22, Material.BELL, "LIARKIT_BTN_SILENCE", silenceDuration, kit.priceLabel("silence"), balance, kit::buySilence);
-		setButtonLiar(menu, 23, Material.CREEPER_HEAD, "LIARKIT_BTN_PIGS", pigDuration, kit.priceLabel("pigs-creepers"), balance, kit::buyPigsToCreepers);
+		setButtonLiar(menu, 23, Material.CREEPER_HEAD, "LIARKIT_BTN_PIGS", pigDuration, kit.priceLabel("pigs-creepers"), balance, kit::promptPigsTarget);
 		setButtonLiar(menu, 24, Material.GHAST_TEAR, "LIARKIT_BTN_GHOST", ghostDuration, kit.priceLabel("ghost"), balance, kit::buyVanish);
 		
 		return menu;

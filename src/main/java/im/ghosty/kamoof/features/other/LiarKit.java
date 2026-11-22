@@ -60,6 +60,10 @@ public final class LiarKit extends Feature {
 	private final Map<UUID, String> ghostNames = new ConcurrentHashMap<>();
 	/** UUID du faux joueur ajouté au TAB pour la connexion fantôme en cours. */
 	private final Map<UUID, UUID> ghostTabs = new ConcurrentHashMap<>();
+	/** Joueurs en attente de saisie du pseudo cible (illusion « cochons en creepers »). */
+	private final Set<UUID> awaitingPigsTarget = ConcurrentHashMap.newKeySet();
+	/** Acheteur associé à chaque cible de l'illusion « cochons en creepers ». */
+	private final Map<UUID, UUID> pigBuyers = new ConcurrentHashMap<>();
 	/** Joueurs actuellement en mode fantôme (vanish). */
 	private final Set<UUID> vanished = ConcurrentHashMap.newKeySet();
 	
@@ -101,6 +105,8 @@ public final class LiarKit extends Feature {
 		anonymousRestore.clear();
 		ghostNames.clear();
 		ghostTabs.clear();
+		pigBuyers.clear();
+		awaitingPigsTarget.clear();
 		vanished.clear();
 	}
 	
@@ -547,53 +553,108 @@ public final class LiarKit extends Feature {
 	}
 	
 	/**
-	 * Fait voir à un joueur <b>tous les cochons comme des creepers</b> (illusion purement côté
-	 * client : le serveur reste inchangé).
+	 * Demande à un joueur d'écrire dans le chat le pseudo de la cible de l'illusion « cochons en
+	 * creepers ». La saisie est interceptée et n'est jamais diffusée dans le chat.
 	 *
-	 * @param player Le spectateur (celui qui voit l'illusion)
+	 * @param buyer L'acheteur
 	 */
-	public void buyPigsToCreepers(Player player) {
-		if (!check(player))
+	public void promptPigsTarget(Player buyer) {
+		if (!check(buyer))
 			return;
 		if (!IllusionManager.isAvailable()) {
-			Lang.send(player, "LIARKIT_NO_PACKETEVENTS");
+			Lang.send(buyer, "LIARKIT_NO_PACKETEVENTS");
 			return;
 		}
-		if (!charge(player, price("pigs-creepers")))
+		awaitingPigsTarget.add(buyer.getUniqueId());
+		Lang.send(buyer, "LIARKIT_PIGS_PROMPT");
+	}
+	
+	/**
+	 * Intercepte la saisie du pseudo cible (illusion « cochons en creepers ») : le message tapé
+	 * n'est pas diffusé, il sert uniquement à désigner le joueur cible.
+	 *
+	 * @param event L'événement de chat
+	 */
+	@EventHandler(priority = EventPriority.LOWEST)
+	public void onPigsTargetChat(AsyncPlayerChatEvent event) {
+		Player buyer = event.getPlayer();
+		if (!awaitingPigsTarget.remove(buyer.getUniqueId()))
+			return;
+		event.setCancelled(true);
+		String input = event.getMessage().trim();
+		if (input.equalsIgnoreCase("cancel") || input.equalsIgnoreCase("annuler")) {
+			Lang.send(buyer, "LIARKIT_PIGS_CANCELLED");
+			return;
+		}
+		Bukkit.getScheduler().runTask(KamoofPlugin.getInstance(), () -> {
+			Player target = Bukkit.getPlayerExact(input);
+			if (target == null)
+				for (Player online : Bukkit.getOnlinePlayers())
+					if (online.getName().equalsIgnoreCase(input)) {
+						target = online;
+						break;
+					}
+			if (target == null) {
+				Lang.send(buyer, "LIARKIT_PIGS_NOT_FOUND", input);
+				return;
+			}
+			buyPigsToCreepers(buyer, target);
+		});
+	}
+	
+	/**
+	 * Fait voir à un <b>joueur cible</b> tous les cochons comme des creepers (illusion purement
+	 * côté client : le serveur reste inchangé).
+	 *
+	 * @param buyer  L'acheteur (celui qui paie)
+	 * @param target La cible (celui qui voit l'illusion)
+	 */
+	public void buyPigsToCreepers(Player buyer, Player target) {
+		if (!check(buyer))
+			return;
+		if (!IllusionManager.isAvailable()) {
+			Lang.send(buyer, "LIARKIT_NO_PACKETEVENTS");
+			return;
+		}
+		if (!charge(buyer, price("pigs-creepers")))
 			return;
 		
-		UUID uuid = player.getUniqueId();
-		IllusionManager.setPigsAsCreepers(player, true);
+		UUID targetId = target.getUniqueId();
+		IllusionManager.setPigsAsCreepers(target, true);
+		pigBuyers.put(targetId, buyer.getUniqueId());
 		
 		final int duration = pigDuration();
-		cancel(pigTasks, uuid);
-		pigTasks.put(uuid, Bukkit.getScheduler().runTaskTimer(KamoofPlugin.getInstance(), new Runnable() {
+		cancel(pigTasks, targetId);
+		pigTasks.put(targetId, Bukkit.getScheduler().runTaskTimer(KamoofPlugin.getInstance(), new Runnable() {
 			private int left = duration;
 			
 			@Override
 			public void run() {
-				Player online = Bukkit.getPlayer(uuid);
+				Player online = Bukkit.getPlayer(targetId);
 				if (online == null || !online.isOnline()) {
-					cancel(pigTasks, uuid);
+					cancel(pigTasks, targetId);
+					pigBuyers.remove(targetId);
 					return;
 				}
 				if (left <= 0) {
-					endPigs(uuid);
+					endPigs(targetId);
 					return;
 				}
 				left--;
 			}
 		}, 20L, 20L));
-		Lang.send(player, "LIARKIT_PIGS_ON", durationLabel(duration));
+		Lang.send(buyer, "LIARKIT_PIGS_ON", target.getName(), durationLabel(duration));
 	}
 	
-	private void endPigs(UUID uuid) {
-		cancel(pigTasks, uuid);
-		Player player = Bukkit.getPlayer(uuid);
-		if (player != null)
-			IllusionManager.setPigsAsCreepers(player, false);
-		if (player != null && player.isOnline())
-			Lang.send(player, "LIARKIT_PIGS_OFF");
+	private void endPigs(UUID targetId) {
+		cancel(pigTasks, targetId);
+		Player target = Bukkit.getPlayer(targetId);
+		if (target != null)
+			IllusionManager.setPigsAsCreepers(target, false);
+		UUID buyerId = pigBuyers.remove(targetId);
+		Player buyer = buyerId == null ? null : Bukkit.getPlayer(buyerId);
+		if (buyer != null && buyer.isOnline())
+			Lang.send(buyer, "LIARKIT_PIGS_OFF");
 	}
 	
 	/**
@@ -677,6 +738,7 @@ public final class LiarKit extends Feature {
 		}
 		// Le clone et le silence doivent disparaître avec le joueur (sinon ils resteraient fantômes
 		// côté serveur). Le clone est retiré pour tous les autres joueurs.
+		awaitingPigsTarget.remove(uuid);
 		if (cloneTasks.containsKey(uuid))
 			endClone(uuid, false);
 		if (silenceTasks.containsKey(uuid)) {

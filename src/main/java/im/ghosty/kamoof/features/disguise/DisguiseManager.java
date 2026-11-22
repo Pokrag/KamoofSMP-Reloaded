@@ -4,6 +4,7 @@ import com.earth2me.essentials.Essentials;
 import com.earth2me.essentials.User;
 import im.ghosty.kamoof.KamoofPlugin;
 import im.ghosty.kamoof.api.KamoofSMP;
+import im.ghosty.kamoof.utils.MinecraftAPI;
 import lombok.experimental.UtilityClass;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
@@ -19,6 +20,7 @@ import org.bukkit.entity.Player;
 
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Classe utilitaire pour déguiser un joueur.
@@ -213,24 +215,55 @@ public final class DisguiseManager {
 		// les requêtes/stockages sont bloquants : on les exécute hors du thread principal
 		Bukkit.getScheduler().runTaskAsynchronously(KamoofPlugin.getInstance(), () -> {
 			try {
-				SkinProperty property;
-				SkinIdentifier identifier;
+				SkinProperty property = null;
+				SkinIdentifier identifier = null;
 				
-				// 1) Propriété signée du profil Mojang : elle contient la peau ET la cape
-				Optional<MojangSkinDataResult> mojang = skinsRestorer.getMojangAPI().getSkin(name);
-				if (mojang.isPresent()) {
-					property = mojang.get().getSkinProperty();
-					identifier = SkinIdentifier.ofPlayer(mojang.get().getUniqueId());
-					// on mémorise le skin pour que SkinsRestorer le connaisse (persistance, GUI, refresh)
-					skinsRestorer.getSkinStorage().setPlayerSkinData(mojang.get().getUniqueId(), name, property, System.currentTimeMillis() / 1000L);
-				} else {
-					// 2) Repli : skin géré/caché par SkinsRestorer (peau + cape également)
-					Optional<InputDataResult> result = skinsRestorer.getSkinStorage().findOrCreateSkinData(name);
-					if (result.isEmpty())
-						return;
-					property = result.get().getProperty();
-					identifier = result.get().getIdentifier();
+				// 1) Profil Mojang : propriété signée contenant la peau ET la cape (comptes Java).
+				try {
+					Optional<MojangSkinDataResult> mojang = skinsRestorer.getMojangAPI().getSkin(name);
+					if (mojang.isPresent()) {
+						property = mojang.get().getSkinProperty();
+						identifier = SkinIdentifier.ofPlayer(mojang.get().getUniqueId());
+						// on mémorise le skin pour que SkinsRestorer le connaisse (persistance, GUI, refresh)
+						skinsRestorer.getSkinStorage().setPlayerSkinData(mojang.get().getUniqueId(), name, property, System.currentTimeMillis() / 1000L);
+					}
+				} catch (Throwable ignored) {
 				}
+				
+				// 2) mc-api.io : seul moyen de résoudre la peau/cape d'un compte BEDROCK (et d'un
+				//    compte Java introuvable côté Mojang). L'API renvoie une propriété signée.
+				if (property == null) {
+					for (MinecraftAPI.Edition edition : MinecraftAPI.Edition.values()) {
+						Optional<MinecraftAPI.Profile> found = MinecraftAPI.byName(name, edition);
+						if (found.isEmpty() || !found.get().hasSkin())
+							continue;
+						MinecraftAPI.Profile profile = found.get();
+						property = SkinProperty.of(profile.value(), profile.signature());
+						if (profile.uuid() != null) {
+							identifier = SkinIdentifier.ofPlayer(profile.uuid());
+							skinsRestorer.getSkinStorage().setPlayerSkinData(profile.uuid(), name, property, System.currentTimeMillis() / 1000L);
+						} else {
+							identifier = SkinIdentifier.ofCustom(name);
+							skinsRestorer.getSkinStorage().setCustomSkinData(name, property);
+						}
+						break;
+					}
+				}
+				
+				// 3) Repli : skin géré/caché par SkinsRestorer (peau + cape également)
+				if (property == null) {
+					try {
+						Optional<InputDataResult> result = skinsRestorer.getSkinStorage().findOrCreateSkinData(name);
+						if (result.isPresent()) {
+							property = result.get().getProperty();
+							identifier = result.get().getIdentifier();
+						}
+					} catch (Throwable ignored) {
+					}
+				}
+				
+				if (property == null || identifier == null)
+					return;
 				
 				skinsRestorer.getPlayerStorage().setSkinIdOfPlayer(player.getUniqueId(), identifier);
 				applyProperty(player, property);

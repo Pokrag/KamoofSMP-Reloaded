@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -49,6 +50,8 @@ public final class NametagManager {
 	private static final Map<UUID, String> NICKNAMES = new ConcurrentHashMap<>();
 	/** Dernier profil complet vu pour un joueur (conserve la peau/cape lors du rafraîchissement). */
 	private static final Map<UUID, UserProfile> PROFILES = new ConcurrentHashMap<>();
+	/** Joueurs pour lesquels un cycle « masquer/afficher » Bedrock est en cours. */
+	private static final Set<UUID> REFRESHING = ConcurrentHashMap.newKeySet();
 	
 	private static NametagListener listener;
 	private static boolean warned;
@@ -206,6 +209,103 @@ public final class NametagManager {
 			}
 		} catch (Throwable exc) {
 			logError("Impossible de rafraîchir le pseudo au-dessus de la tête : " + exc);
+		}
+		
+		// Geyser ignore la mise à jour du profil pour un joueur déjà connu : il faut recréer
+		// l'entité côté Bedrock (cf. la méthode pour le détail).
+		try {
+			refreshBedrock(target);
+		} catch (Throwable exc) {
+			logError("Impossible de rafraîchir le pseudo au-dessus de la tête (Bedrock) : " + exc);
+		}
+	}
+	
+	/**
+	 * Geyser n'applique <b>pas</b> la mise à jour du nom d'un joueur déjà connu : côté Bedrock, le
+	 * pseudo affiché au-dessus de la tête est le <i>username</i> de l'entité, figé au moment où
+	 * elle est envoyée au client. Réécrire les paquets <code>PLAYER_INFO</code> ne suffit donc pas
+	 * (contrairement à un client Java, qui, lui, se met à jour).
+	 * <p>
+	 * La parade consiste à <b>masquer puis réafficher</b> le joueur pour chaque spectateur Bedrock :
+	 * le serveur renvoie alors toute la séquence attendue par Geyser
+	 * (<code>PLAYER_INFO_REMOVE</code> + destruction de l'entité, puis <code>PLAYER_INFO_ADD</code>
+	 * — réécrit avec le pseudonyme — + création de l'entité), ce qui recrée l'entité Bedrock avec
+	 * le bon pseudo au-dessus de la tête.
+	 *
+	 * @param target Le joueur dont le pseudo vient d'être modifié
+	 */
+	private static void refreshBedrock(Player target) {
+		UUID uuid = target.getUniqueId();
+		// évite d'empiler deux cycles masquer/afficher pour le même joueur
+		if (!REFRESHING.add(uuid))
+			return;
+		
+		List<Player> viewers = new ArrayList<>();
+		for (Player viewer : Bukkit.getOnlinePlayers()) {
+			if (viewer.equals(target) || !viewer.canSee(target))
+				continue;
+			if (!isBedrockPlayer(viewer.getUniqueId()))
+				continue;
+			viewer.hidePlayer(KamoofPlugin.getInstance(), target);
+			viewers.add(viewer);
+		}
+		
+		if (viewers.isEmpty()) {
+			REFRESHING.remove(uuid);
+			return;
+		}
+		
+		// un léger délai est nécessaire : masquer et réafficher dans le même tick est mutualisé
+		// par le serveur et n'entraîne aucune re-création de l'entité.
+		Bukkit.getScheduler().runTaskLater(KamoofPlugin.getInstance(), () -> {
+			try {
+				Player refreshed = Bukkit.getPlayer(uuid);
+				if (refreshed != null) {
+					for (Player viewer : viewers)
+						if (viewer.isOnline())
+							viewer.showPlayer(KamoofPlugin.getInstance(), refreshed);
+				}
+			} finally {
+				REFRESHING.remove(uuid);
+			}
+		}, 1L);
+	}
+	
+	/**
+	 * Détermine si un joueur est un joueur <b>Bedrock</b>. La détection utilise, sans dépendance
+	 * obligatoire : le format d'UUID propre à Floodgate, l'API de Geyser, puis celle de Floodgate.
+	 *
+	 * @param uuid L'UUID du joueur
+	 * @return <code>true</code> si le joueur provient de Bedrock
+	 */
+	private static boolean isBedrockPlayer(UUID uuid) {
+		if (uuid == null)
+			return false;
+		// Floodgate attribue toujours des UUID de la forme « 00000000-0000-0000-.... »
+		if (uuid.toString().startsWith("00000000-0000-0000-"))
+			return true;
+		return geyserBedrock(uuid) || floodgateBedrock(uuid);
+	}
+	
+	private static boolean geyserBedrock(UUID uuid) {
+		try {
+			Class<?> apiClass = Class.forName("org.geysermc.geyser.api.GeyserApi");
+			Object api = apiClass.getMethod("api").invoke(null);
+			Object result = apiClass.getMethod("isBedrockPlayer", UUID.class).invoke(api, uuid);
+			return result instanceof Boolean value && value;
+		} catch (Throwable ignored) {
+			return false;
+		}
+	}
+	
+	private static boolean floodgateBedrock(UUID uuid) {
+		try {
+			Class<?> apiClass = Class.forName("org.geysermc.floodgate.api.FloodgateApi");
+			Object api = apiClass.getMethod("getInstance").invoke(null);
+			Object result = apiClass.getMethod("isFloodgatePlayer", UUID.class).invoke(api, uuid);
+			return result instanceof Boolean value && value;
+		} catch (Throwable ignored) {
+			return false;
 		}
 	}
 	

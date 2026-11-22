@@ -201,7 +201,9 @@ public final class IllusionManager {
 	private static void spawnCloneTo(Player viewer, Clone clone) {
 		UserProfile profile = new UserProfile(clone.cloneId, clone.name, new ArrayList<>(clone.textures));
 		WrapperPlayServerPlayerInfoUpdate.PlayerInfo info = new WrapperPlayServerPlayerInfoUpdate.PlayerInfo(profile);
-		info.setListed(true);
+		// Le clone ne doit PAS apparaître dans le TAB : on charge son profil (pour la peau) mais on
+		// le marque comme « non listé ».
+		info.setListed(false);
 		send(viewer, new WrapperPlayServerPlayerInfoUpdate(
 			EnumSet.of(
 				WrapperPlayServerPlayerInfoUpdate.Action.ADD_PLAYER,

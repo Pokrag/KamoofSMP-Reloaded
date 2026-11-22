@@ -18,8 +18,11 @@ import net.skinsrestorer.api.property.SkinApplier;
 import net.skinsrestorer.api.property.SkinIdentifier;
 import net.skinsrestorer.api.property.SkinProperty;
 import org.bukkit.Bukkit;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.Plugin;
 
+import java.io.File;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -114,6 +117,10 @@ public final class DisguiseManager {
 	
 	/**
 	 * Diffuse un faux message de connexion ou de déconnexion pour le pseudo donné.
+	 * <p>
+	 * Si EssentialsX a configuré un message personnalisé (<code>custom-join-message</code> /
+	 * <code>custom-quit-message</code> dans son <code>config.yml</code>), c'est ce message qui est utilisé.
+	 * Sinon, on retombe sur les messages de langue du plugin.
 	 *
 	 * @param name Le pseudo à afficher
 	 * @param join <code>true</code> pour un message de connexion, <code>false</code> pour une déconnexion
@@ -121,10 +128,38 @@ public final class DisguiseManager {
 	public static void broadcastFake(String name, boolean join) {
 		if (name == null || name.isEmpty())
 			return;
-		Component message = Message.deserialize(String.format(Lang.get(join ? "FAKE_CONNECT" : "FAKE_DISCONNECT"), name));
+		String custom = essentialsCustomMessage(join);
+		String raw = custom != null
+			? custom.replace("{USERNAME}", name).replace("{PLAYER}", name)
+			: String.format(Lang.get(join ? "FAKE_CONNECT" : "FAKE_DISCONNECT"), name);
+		Component message = Message.deserialize(raw);
 		for (Player viewer : Bukkit.getOnlinePlayers())
 			viewer.sendMessage(message);
 		Bukkit.getConsoleSender().sendMessage(message);
+	}
+	
+	/**
+	 * Récupère le message de connexion/déconnexion personnalisé d'EssentialsX, s'il est défini.
+	 *
+	 * @param join <code>true</code> pour la connexion, <code>false</code> pour la déconnexion
+	 * @return Le message personnalisé, ou <code>null</code> si EssentialsX est absent ou n'en a pas
+	 */
+	private static String essentialsCustomMessage(boolean join) {
+		Plugin essentials = Bukkit.getPluginManager().getPlugin("Essentials");
+		if (essentials == null)
+			return null;
+		try {
+			File file = new File(essentials.getDataFolder(), "config.yml");
+			if (!file.isFile())
+				return null;
+			String message = YamlConfiguration.loadConfiguration(file)
+				.getString(join ? "custom-join-message" : "custom-quit-message");
+			if (message == null || message.isEmpty() || message.equalsIgnoreCase("none"))
+				return null;
+			return message;
+		} catch (Throwable exc) {
+			return null;
+		}
 	}
 	
 	// ---------------------------------------------------------------------

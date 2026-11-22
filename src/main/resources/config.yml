@@ -167,7 +167,7 @@ macelimiter:
 messages:
   # Tu viens de te déguiser
   # %player% = Nom original, %nick% = Déguisement
-  disguised: "<green>Tu es maintenant déguisé en <yellow>%nick%<br><click:run_command:/undisguise><yellow><b>[CLIQUE ICI]</b> <aqua>Pour Retirer ton déguisement ou fais la commande /undisguise</click>"
+  disguised: "<green>Tu es maintenant déguisé en <yellow>%nick%<br><click:run_command:/camouf menu><yellow><b>[CLIQUE ICI]</b> <aqua>Pour ouvrir le menu de déguisement</click>"
   # Tu viens de mourir en étant déguisé
   # %player% = Nom original, %nick% = Déguisement
   lostdisguise: "<red>Tu as perdu ton déguisement en mourrant (rip bozo)"

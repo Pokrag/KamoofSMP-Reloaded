@@ -88,7 +88,7 @@ public final class DisguiseListener extends Feature {
 	 *
 	 * @since 1.0
 	 */
-	@EventHandler(priority = EventPriority.LOWEST)
+	@EventHandler(priority = EventPriority.LOW)
 	public void onDeath(PlayerDeathEvent event) {
 		Player player = event.getEntity();
 		String disguise = DisguiseManager.getNickname(player);

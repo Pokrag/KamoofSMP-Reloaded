@@ -3,10 +3,12 @@ package im.ghosty.kamoof.features.drophead;
 import im.ghosty.kamoof.KamoofPlugin;
 import im.ghosty.kamoof.api.KamoofSMP;
 import im.ghosty.kamoof.features.Feature;
+import im.ghosty.kamoof.features.disguise.DisguiseManager;
 import im.ghosty.kamoof.features.ritual.RitualHandler;
 import org.bukkit.GameRule;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.inventory.ItemStack;
 
@@ -24,22 +26,31 @@ public final class HeadDropper extends Feature {
 		return true;
 	}
 	
-	@EventHandler
+	/**
+	 * <b>Priorité {@link EventPriority#LOWEST} :</b> le déguisement doit encore être actif à ce moment-là pour
+	 * récupérer le pseudo déguisé (voir {@link im.ghosty.kamoof.features.disguise.DisguiseListener#onDeath}).
+	 */
+	@EventHandler(priority = EventPriority.LOWEST)
 	public void onDeath(PlayerDeathEvent event) {
 		Player player = event.getEntity();
+		// Si le joueur est déguisé, c'est la tête du déguisement qui tombe à la place de la sienne
+		String name = DisguiseManager.getNickname(player);
+		if (name == null || name.isEmpty())
+			name = KamoofSMP.getInstance().getName(player);
+		
 		String pacte = RitualHandler.getPacte(player);
 		if (pacte != null) {
 			if (pacte.equalsIgnoreCase("2"))
 				return;
 			if (pacte.equalsIgnoreCase("1")) {
-				ItemStack skull = SkullManager.getSkull(KamoofSMP.getInstance().getName(player));
+				ItemStack skull = SkullManager.getSkull(name);
 				skull.setAmount(KamoofPlugin.config().getInt("ritual.pactes.bloody.heads"));
 				drop(event, player, skull);
 				return;
 			}
 		}
 		if (KamoofPlugin.config().getBoolean("drophead.enabled")) {
-			drop(event, player, SkullManager.getSkull(KamoofSMP.getInstance().getName(player)));
+			drop(event, player, SkullManager.getSkull(name));
 		}
 	}
 	

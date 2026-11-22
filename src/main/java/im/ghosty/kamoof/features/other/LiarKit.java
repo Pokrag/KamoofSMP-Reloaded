@@ -50,8 +50,16 @@ public final class LiarKit extends Feature {
 	private final Map<UUID, BukkitTask> ghostTasks = new ConcurrentHashMap<>();
 	/** Tâches ré-appliquant/terminant le mode fantôme (vanish). */
 	private final Map<UUID, BukkitTask> vanishTasks = new ConcurrentHashMap<>();
+	/** Tâches de vie du clone (déplacement + fin). */
+	private final Map<UUID, BukkitTask> cloneTasks = new ConcurrentHashMap<>();
+	/** Tâches terminant le silence (tous les sons du joueur coupés). */
+	private final Map<UUID, BukkitTask> silenceTasks = new ConcurrentHashMap<>();
+	/** Tâches terminant l'illusion « cochons en creepers ». */
+	private final Map<UUID, BukkitTask> pigTasks = new ConcurrentHashMap<>();
 	/** Auteur (pseudo affiché) de la connexion fantôme en cours, pour la déconnexion automatique. */
 	private final Map<UUID, String> ghostNames = new ConcurrentHashMap<>();
+	/** UUID du faux joueur ajouté au TAB pour la connexion fantôme en cours. */
+	private final Map<UUID, UUID> ghostTabs = new ConcurrentHashMap<>();
 	/** Joueurs actuellement en mode fantôme (vanish). */
 	private final Set<UUID> vanished = ConcurrentHashMap.newKeySet();
 	
@@ -84,8 +92,15 @@ public final class LiarKit extends Feature {
 			cancel(ghostTasks, uuid);
 		for (UUID uuid : vanishTasks.keySet())
 			cancel(vanishTasks, uuid);
+		for (UUID uuid : cloneTasks.keySet())
+			cancel(cloneTasks, uuid);
+		for (UUID uuid : silenceTasks.keySet())
+			cancel(silenceTasks, uuid);
+		for (UUID uuid : pigTasks.keySet())
+			cancel(pigTasks, uuid);
 		anonymousRestore.clear();
 		ghostNames.clear();
+		ghostTabs.clear();
 		vanished.clear();
 	}
 	
@@ -126,6 +141,21 @@ public final class LiarKit extends Feature {
 	/** @return La durée (en secondes) de la connexion fantôme et du mode fantôme. */
 	public int ghostDuration() {
 		return Math.max(1, KamoofPlugin.config().getInt("liarkit.ghost-duration", 60));
+	}
+	
+	/** @return La durée (en secondes) du clone de soi-même. */
+	public int cloneDuration() {
+		return Math.max(1, KamoofPlugin.config().getInt("liarkit.clone-duration", 60));
+	}
+	
+	/** @return La durée (en secondes) du silence (sons du joueur coupés). */
+	public int silenceDuration() {
+		return Math.max(1, KamoofPlugin.config().getInt("liarkit.silence-duration", 60));
+	}
+	
+	/** @return La durée (en secondes) de l'illusion « cochons en creepers ». */
+	public int pigDuration() {
+		return Math.max(1, KamoofPlugin.config().getInt("liarkit.pig-duration", 60));
 	}
 	
 	/** @return Le nom du faux progrès affiché. */
@@ -305,9 +335,16 @@ public final class LiarKit extends Feature {
 		String name = displayName(player);
 		boolean renewed = ghostNames.containsKey(uuid);
 		ghostNames.put(uuid, name);
-		// on ne rediffuse le message de connexion que lors du premier achat
-		if (!renewed)
+		// on ne rediffuse le message de connexion (et n'ajoute le faux joueur au TAB) que lors du premier achat
+		if (!renewed) {
 			DisguiseManager.broadcastFake(name, true, player);
+			if (IllusionManager.isAvailable()) {
+				UUID fakeId = UUID.randomUUID();
+				ghostTabs.put(uuid, fakeId);
+				IllusionManager.addGhostTab(fakeId, name, IllusionManager.texturesOf(player));
+			} else
+				Lang.send(player, "LIARKIT_NO_PACKETEVENTS");
+		}
 		
 		cancel(ghostTasks, uuid);
 		int duration = ghostDuration();
@@ -319,6 +356,9 @@ public final class LiarKit extends Feature {
 	private void endGhostJoin(UUID uuid) {
 		cancel(ghostTasks, uuid);
 		String name = ghostNames.remove(uuid);
+		UUID fakeId = ghostTabs.remove(uuid);
+		if (fakeId != null)
+			IllusionManager.removeGhostTab(fakeId);
 		if (name == null || name.isEmpty())
 			return;
 		Player player = Bukkit.getPlayer(uuid);
@@ -393,6 +433,167 @@ public final class LiarKit extends Feature {
 		NametagManager.setTabListed(player, true);
 		DisguiseManager.broadcastFake(displayName(player), true, player);
 		Lang.send(player, "LIARKIT_VANISH_OFF");
+	}
+	
+	/**
+	 * Fait apparaître un <b>clone</b> du joueur (même pseudo, même peau).
+	 *
+	 * @param player La cible
+	 * @param mobile <code>true</code> pour un clone qui se déplace tout seul (IA de « villageois
+	 *               idiot », sans reproduction) — plus cher ; <code>false</code> pour un clone immobile
+	 */
+	public void buyClone(Player player, boolean mobile) {
+		if (!check(player))
+			return;
+		if (!IllusionManager.isAvailable()) {
+			Lang.send(player, "LIARKIT_NO_PACKETEVENTS");
+			return;
+		}
+		if (!charge(player, price(mobile ? "clone-mobile" : "clone")))
+			return;
+		
+		UUID uuid = player.getUniqueId();
+		endClone(uuid, false);
+		if (IllusionManager.spawnClone(player, mobile) == null) {
+			Lang.send(player, "LIARKIT_NO_PACKETEVENTS");
+			return;
+		}
+		
+		final int duration = cloneDuration();
+		cancel(cloneTasks, uuid);
+		cloneTasks.put(uuid, Bukkit.getScheduler().runTaskTimer(KamoofPlugin.getInstance(), new Runnable() {
+			private int left = duration;
+			
+			@Override
+			public void run() {
+				Player online = Bukkit.getPlayer(uuid);
+				if (online == null || !online.isOnline()) {
+					endClone(uuid, false);
+					return;
+				}
+				if (left <= 0) {
+					endClone(uuid, true);
+					return;
+				}
+				// immobile : ne fait rien ; mobile : se déplace façon « villageois idiot »
+				IllusionManager.moveClone(online);
+				left--;
+			}
+		}, 20L, 20L));
+		Lang.send(player, mobile ? "LIARKIT_CLONE_MOBILE_ON" : "LIARKIT_CLONE_ON", durationLabel(duration));
+	}
+	
+	private void endClone(UUID uuid, boolean notify) {
+		cancel(cloneTasks, uuid);
+		IllusionManager.despawnClone(uuid);
+		if (!notify)
+			return;
+		Player player = Bukkit.getPlayer(uuid);
+		if (player != null && player.isOnline())
+			Lang.send(player, "LIARKIT_CLONE_OFF");
+	}
+	
+	/**
+	 * Rend le joueur <b>silencieux</b> : tous les sons qu'il cause (pas, blocs, dégâts...) sont
+	 * supprimés pour les autres joueurs.
+	 *
+	 * @param player La cible
+	 */
+	public void buySilence(Player player) {
+		if (!check(player))
+			return;
+		if (!IllusionManager.isAvailable()) {
+			Lang.send(player, "LIARKIT_NO_PACKETEVENTS");
+			return;
+		}
+		if (!charge(player, price("silence")))
+			return;
+		
+		UUID uuid = player.getUniqueId();
+		IllusionManager.setSilenced(player, true);
+		
+		final int total = silenceDuration() * 20;
+		cancel(silenceTasks, uuid);
+		silenceTasks.put(uuid, Bukkit.getScheduler().runTaskTimer(KamoofPlugin.getInstance(), new Runnable() {
+			private int left = total;
+			
+			@Override
+			public void run() {
+				Player online = Bukkit.getPlayer(uuid);
+				if (online == null || !online.isOnline()) {
+					IllusionManager.setSilenced(player, false);
+					cancel(silenceTasks, uuid);
+					return;
+				}
+				if (left <= 0) {
+					endSilence(uuid);
+					return;
+				}
+				// la position est rafraîchie souvent car elle sert à localiser les sons à couper
+				IllusionManager.refreshSilenced(online);
+				left -= 5;
+			}
+		}, 5L, 5L));
+		Lang.send(player, "LIARKIT_SILENCE_ON", durationLabel(silenceDuration()));
+	}
+	
+	private void endSilence(UUID uuid) {
+		cancel(silenceTasks, uuid);
+		Player player = Bukkit.getPlayer(uuid);
+		if (player != null)
+			IllusionManager.setSilenced(player, false);
+		if (player != null && player.isOnline())
+			Lang.send(player, "LIARKIT_SILENCE_OFF");
+	}
+	
+	/**
+	 * Fait voir à un joueur <b>tous les cochons comme des creepers</b> (illusion purement côté
+	 * client : le serveur reste inchangé).
+	 *
+	 * @param player Le spectateur (celui qui voit l'illusion)
+	 */
+	public void buyPigsToCreepers(Player player) {
+		if (!check(player))
+			return;
+		if (!IllusionManager.isAvailable()) {
+			Lang.send(player, "LIARKIT_NO_PACKETEVENTS");
+			return;
+		}
+		if (!charge(player, price("pigs-creepers")))
+			return;
+		
+		UUID uuid = player.getUniqueId();
+		IllusionManager.setPigsAsCreepers(player, true);
+		
+		final int duration = pigDuration();
+		cancel(pigTasks, uuid);
+		pigTasks.put(uuid, Bukkit.getScheduler().runTaskTimer(KamoofPlugin.getInstance(), new Runnable() {
+			private int left = duration;
+			
+			@Override
+			public void run() {
+				Player online = Bukkit.getPlayer(uuid);
+				if (online == null || !online.isOnline()) {
+					cancel(pigTasks, uuid);
+					return;
+				}
+				if (left <= 0) {
+					endPigs(uuid);
+					return;
+				}
+				left--;
+			}
+		}, 20L, 20L));
+		Lang.send(player, "LIARKIT_PIGS_ON", durationLabel(duration));
+	}
+	
+	private void endPigs(UUID uuid) {
+		cancel(pigTasks, uuid);
+		Player player = Bukkit.getPlayer(uuid);
+		if (player != null)
+			IllusionManager.setPigsAsCreepers(player, false);
+		if (player != null && player.isOnline())
+			Lang.send(player, "LIARKIT_PIGS_OFF");
 	}
 	
 	/**
@@ -474,6 +675,18 @@ public final class LiarKit extends Feature {
 			cancel(vanishTasks, uuid);
 			NametagManager.setTabListed(player, true);
 		}
+		// Le clone et le silence doivent disparaître avec le joueur (sinon ils resteraient fantômes
+		// côté serveur). Le clone est retiré pour tous les autres joueurs.
+		if (cloneTasks.containsKey(uuid))
+			endClone(uuid, false);
+		if (silenceTasks.containsKey(uuid)) {
+			cancel(silenceTasks, uuid);
+			IllusionManager.setSilenced(player, false);
+		}
+		if (pigTasks.containsKey(uuid)) {
+			cancel(pigTasks, uuid);
+			IllusionManager.setPigsAsCreepers(player, false);
+		}
 		// La connexion fantôme continue même après une vraie déconnexion : le « fantôme » doit
 		// finir par se déconnecter tout seul (c'est tout l'intérêt de l'illusion).
 	}
@@ -494,6 +707,9 @@ public final class LiarKit extends Feature {
 			if (ghost != null && !ghost.equals(player))
 				player.hidePlayer(KamoofPlugin.getInstance(), ghost);
 		}
+		// Les illusions persistantes (faux joueurs du TAB, clones) doivent être renvoyées aux
+		// joueurs qui se connectent pendant qu'elles sont actives.
+		IllusionManager.resendTo(player);
 	}
 	
 }

@@ -94,6 +94,8 @@ public final class KamoofPlugin extends JavaPlugin {
 		
 		// Réécriture du pseudo au-dessus de la tête via PacketEvents (inerte si absent).
 		NametagManager.init();
+		// Illusions de la Trousse du Menteur (faux joueurs du TAB, clones, silence, cochons en creepers).
+		IllusionManager.init();
 		
 		registerCommand("kamoofsmp", new KamoofCMD());
 		registerCommand("givehead", new GiveHeadCMD());
@@ -108,6 +110,7 @@ public final class KamoofPlugin extends JavaPlugin {
 	@Override
 	public void onDisable() {
 		super.onDisable();
+		IllusionManager.disable();
 		NametagManager.disable();
 		FeatureManager.disable();
 		if (metrics != null)

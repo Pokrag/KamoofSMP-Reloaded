@@ -176,6 +176,12 @@ liarkit:
   # Durée (en secondes) de la connexion fantôme et du mode fantôme (vanish)
   # La connexion fantôme peut être renouvelée (rachetée) pour repousser la déconnexion automatique
   ghost-duration: 60
+  # Durée (en secondes) du clone de soi-même (immobile ou mobile)
+  clone-duration: 60
+  # Durée (en secondes) du silence (tous les sons causés par le joueur sont coupés pour les autres)
+  silence-duration: 60
+  # Durée (en secondes) de l'illusion « tous les cochons sont des creepers »
+  pig-duration: 60
   # Le nom du faux progrès (advancement) affiché par « Faux progrès »
   advancement-name: "Progrès Secret"
   # Les prix de chaque action (0 = gratuit)
@@ -187,6 +193,14 @@ liarkit:
     fake-death: 150.0
     fake-advancement: 200.0
     ghost-join: 250.0
+    # Clone immobile (prix de base)
+    clone: 300.0
+    # Clone mobile (IA de « villageois idiot », sans reproduction) : volontairement plus cher
+    clone-mobile: 800.0
+    # Silence : tous les sons causés par le joueur sont coupés pour les autres
+    silence: 250.0
+    # Illusion « cochons en creepers » pour soi-même
+    pigs-creepers: 200.0
     # Le mode fantôme (invisibilité totale) est volontairement très cher
     ghost: 5000.0
 

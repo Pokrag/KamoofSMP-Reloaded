@@ -85,7 +85,7 @@ public final class KamoofCMD implements CommandExecutor, TabCompleter {
 				return true;
 			}
 			case "update": {
-				UpdateChecker.getInstance().checkForUpdate(player);
+				UpdateChecker.getInstance().installUpdate(player);
 				return true;
 			}
 			case "setup": {

@@ -11,6 +11,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.plugin.PluginManager;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.io.File;
@@ -153,9 +154,76 @@ public final class UpdateChecker extends Feature {
 		});
 	}
 	
+	/**
+	 * Vérifie puis installe automatiquement la dernière version : le jar est téléchargé et remplace l'ancien.
+	 * La mise à jour est appliquée immédiatement via PlugManX s'il est présent, sinon au prochain redémarrage.
+	 *
+	 * @param sender La cible à prévenir
+	 */
+	public void installUpdate(CommandSender sender) {
+		Bukkit.getScheduler().runTaskAsynchronously(KamoofPlugin.getInstance(), () -> {
+			boolean update = checkForUpdate();
+			if (!update) {
+				Bukkit.getScheduler().runTask(KamoofPlugin.getInstance(), () -> {
+					if (lastCheckFailed)
+						Lang.send(sender, "UPDATE_CHECKER_FAIL");
+					else
+						Lang.send(sender, "UPDATE_ALREADY_LAST");
+				});
+				return;
+			}
+			
+			// Téléchargement du jar (l'ancien est écrasé), sans redémarrage automatique.
+			if (!downloadJar(updateLink)) {
+				Bukkit.getScheduler().runTask(KamoofPlugin.getInstance(),
+					() -> Lang.send(sender, "UPDATE_DOWNLOAD_FAIL"));
+				return;
+			}
+			
+			Bukkit.getScheduler().runTask(KamoofPlugin.getInstance(), () -> applyUpdate(sender));
+		});
+	}
+	
+	// Applique la mise à jour : recharge à chaud via PlugManX, sinon prévient qu'un redémarrage est requis.
+	private void applyUpdate(CommandSender sender) {
+		String pluginName = KamoofPlugin.getInstance().getDescription().getName();
+		
+		if (isPlugManAvailable()) {
+			Lang.send(sender, "UPDATE_PLUGMAN_RELOADING");
+			CommandSender console = Bukkit.getConsoleSender();
+			// PlugManX recharge le jar : on décharge puis on recharge le plugin.
+			Bukkit.dispatchCommand(console, "plugman unload " + pluginName);
+			Bukkit.dispatchCommand(console, "plugman load " + pluginName);
+			return;
+		}
+		
+		showDownloadedMessage();
+		sender.sendMessage(this.message);
+		Lang.send(sender, "UPDATE_RESTART_REQUIRED");
+	}
+	
 	public boolean downloadUpdate(String url, boolean restart) {
-		if (url == null)
+		if (!downloadJar(url))
 			return false;
+		
+		sendMessage("UPDATE_DOWNLOADED");
+		
+		if (restart) {
+			Bukkit.getScheduler().runTask(KamoofPlugin.getInstance(),
+				() -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "restart"));
+		} else {
+			showDownloadedMessage();
+		}
+		
+		return true;
+	}
+	
+	// Télécharge le jar de la dernière version et écrase le fichier du plugin actuel.
+	private boolean downloadJar(String url) {
+		if (url == null) {
+			sendMessage("UPDATE_DOWNLOAD_FAIL");
+			return false;
+		}
 		try {
 			sendMessage("UPDATE_DOWNLOADING");
 			HTTPUtils.RawResponse response = HTTPUtils.getRaw(url,
@@ -172,31 +240,26 @@ public final class UpdateChecker extends Feature {
 			URL location = KamoofPlugin.class.getProtectionDomain().getCodeSource().getLocation();
 			File pluginFile = Utils.getParentPluginFile(location);
 			Files.write(Path.of(pluginFile.toURI()), response.response());
-			
-			sendMessage("UPDATE_DOWNLOADED");
-			
-			if (!restart) {
-				
-				String hover = String.format(Lang.get("NEW_VERSION_HOVER"), newVersion, downloads, changelog);
-				String uUrl = RELEASES_PAGE + "/tag/v" + newVersion;
-				String message = String.format(Lang.get("NEW_VERSION_DOWNLOADED"), hover, uUrl, currentVersion, newVersion);
-				this.message = Message.deserialize(message);
-				
-				hasUpdate = true;
-				Bukkit.getConsoleSender().sendMessage(this.message);
-				
-			} else {
-				Bukkit.getScheduler().runTask(KamoofPlugin.getInstance(),
-					() -> Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "restart"));
-			}
-			
-			
 			return true;
 		} catch (Throwable exc) {
 			exc.printStackTrace();
 			sendMessage("UPDATE_DOWNLOAD_FAIL");
+			return false;
 		}
-		return false;
+	}
+	
+	private void showDownloadedMessage() {
+		String hover = String.format(Lang.get("NEW_VERSION_HOVER"), newVersion, downloads, changelog);
+		String uUrl = RELEASES_PAGE + "/tag/v" + newVersion;
+		String raw = String.format(Lang.get("NEW_VERSION_DOWNLOADED"), hover, uUrl, currentVersion, newVersion);
+		this.message = Message.deserialize(raw);
+		hasUpdate = true;
+		Bukkit.getConsoleSender().sendMessage(this.message);
+	}
+	
+	private static boolean isPlugManAvailable() {
+		PluginManager pluginManager = Bukkit.getPluginManager();
+		return pluginManager.getPlugin("PlugManX") != null || pluginManager.getPlugin("PlugMan") != null;
 	}
 	
 	public String getFileURL(JsonObject obj) {

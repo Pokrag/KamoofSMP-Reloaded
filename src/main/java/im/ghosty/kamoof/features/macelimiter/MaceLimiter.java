@@ -55,10 +55,40 @@ public final class MaceLimiter extends Feature {
 	}
 	
 	/**
-	 * @return Si une nouvelle mace peut être craftée
+	 * @return Si une nouvelle mace peut être craftée (limite globale du serveur)
 	 */
 	public static boolean canCraft() {
 		return data().getInt("maces", 0) < KamoofPlugin.config().getInt("macelimiter.limit");
+	}
+	
+	/**
+	 * @return Le nombre maximum de maces autorisées par inventaire, ou une valeur &lt;= 0 si désactivé
+	 */
+	public static int inventoryLimit() {
+		return KamoofPlugin.config().getInt("macelimiter.inventory-limit", 1);
+	}
+	
+	/**
+	 * Compte les maces présentes dans l'inventaire du joueur (inventaire principal, armure & main secondaire)
+	 *
+	 * @param player Le joueur à vérifier
+	 * @return Le nombre de maces possédées
+	 */
+	public static int countMaces(HumanEntity player) {
+		int count = 0;
+		for (ItemStack item : player.getInventory().getContents())
+			if (item != null && item.getType() == Material.MACE)
+				count += item.getAmount();
+		return count;
+	}
+	
+	/**
+	 * @param player Le joueur à vérifier
+	 * @return Si le joueur possède déjà trop de maces dans son inventaire pour en crafter une nouvelle
+	 */
+	public static boolean hasReachedInventoryLimit(HumanEntity player) {
+		int limit = inventoryLimit();
+		return limit > 0 && countMaces(player) >= limit;
 	}
 	
 	@Override
@@ -86,7 +116,8 @@ public final class MaceLimiter extends Feature {
 		ItemStack result = event.getInventory().getResult();
 //		if (event.getView().getPlayer().getGameMode() == GameMode.CREATIVE)
 //			return;
-		if (result != null && result.getType() == Material.MACE && !canCraft())
+		if (result != null && result.getType() == Material.MACE
+			&& (!canCraft() || hasReachedInventoryLimit(event.getView().getPlayer())))
 			event.getInventory().setResult(null);
 	}
 	
@@ -111,11 +142,18 @@ public final class MaceLimiter extends Feature {
 				return;
 		}
 		
+		HumanEntity player = event.getView().getPlayer();
+		
+		// Empêche de crafter une mace de plus si le joueur en possède déjà assez dans son inventaire
+		if (hasReachedInventoryLimit(player)) {
+			event.setCancelled(true);
+			return;
+		}
+		
 		if (canCraft()) {
 			int old = data().getInt("maces", 0);
 			int limit = KamoofPlugin.config().getInt("macelimiter.limit");
 			add();
-			HumanEntity player = event.getView().getPlayer();
 			Message.send(player, "messages.craft-mace", Map.of("player", (player instanceof Player p ? p.getName() : player.getName()), "old", old, "now", old + 1, "limit", limit));
 		} else
 			event.setCancelled(true);

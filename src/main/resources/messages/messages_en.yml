@@ -94,6 +94,7 @@ CFG_RITUAL_ACC_FLAMESOUL: "Accepted: Soul Flames|Turn the flame particles into s
 CFG_TITLE_OTHER: "Other"
 CFG_MACELIMIT_ENABLED: "Mace Limiter|Limit the number of maces that can be crafted."
 CFG_MACELIMIT_LIMIT: "Mace Limit|The limit on craftable maces."
+CFG_MACELIMIT_INVENTORY: "Maces per Inventory|The maximum number of maces a player can have in their inventory. Prevents crafting one more. Set to 0 to disable."
 CFG_MACELIMIT_EC: "No Ender Chest|Disallow putting the mace in an Ender Chest."
 CFG_AUTOUPDATE_FETCH: "Auto Updater|Automatically check for new updates daily."
 CFG_AUTOUPDATE_DOWNLOAD: "Automatic Download|Automatically download the update and offer a server restart."

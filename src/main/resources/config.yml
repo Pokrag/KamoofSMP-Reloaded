@@ -151,8 +151,12 @@ macelimiter:
   # Empêche trop de masses d'être craftées
   # Ceci ne s'applique pas à celles déjà existantes
   enabled: true
-  # Limite de masses créables
+  # Limite de masses créables (total sur tout le serveur)
   limit: 1
+  # Nombre maximum de masses qu'un joueur peut avoir DANS SON INVENTAIRE
+  # Empêche de crafter une nouvelle massue si le joueur en possède déjà autant
+  # Mettre 0 (ou moins) pour désactiver cette vérification
+  inventory-limit: 1
   # Interdit la mise de la mace dans l'enderchest
   no-enderchest: true
 

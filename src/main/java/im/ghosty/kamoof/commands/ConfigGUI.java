@@ -172,6 +172,7 @@ public final class ConfigGUI {
 		setButtonBool(menu, 10, "macelimiter.enabled", getStrings("CFG_MACELIMIT_ENABLED"));
 		setButtonInt(menu, 11, "macelimiter.limit", value -> Math.max(0, value), 1, getStrings("CFG_MACELIMIT_LIMIT"));
 		setButtonBool(menu, 12, "macelimiter.no-enderchest", getStrings("CFG_MACELIMIT_EC"));
+		setButtonInt(menu, 13, "macelimiter.inventory-limit", value -> Math.max(0, value), 1, getStrings("CFG_MACELIMIT_INVENTORY"));
 		
 		setButtonBool(menu, 15, "autoupdate.fetch", getStrings("CFG_AUTOUPDATE_FETCH"));
 		setButtonBool(menu, 16, "autoupdate.download", getStrings("CFG_AUTOUPDATE_DOWNLOAD"));

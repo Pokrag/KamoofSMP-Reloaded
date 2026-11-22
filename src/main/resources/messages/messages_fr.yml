@@ -94,6 +94,7 @@ CFG_RITUAL_ACC_FLAMESOUL: "Accepté: Flammes des âmes|Rendre les particules de 
 CFG_TITLE_OTHER: "Autres"
 CFG_MACELIMIT_ENABLED: "Mace Limiter|Ne pouvoir crafter qu'un nombre limité de maces."
 CFG_MACELIMIT_LIMIT: "Limite de Maces|La limite de maces craftable."
+CFG_MACELIMIT_INVENTORY: "Maces par Inventaire|Le nombre maximum de maces qu'un joueur peut avoir dans son inventaire. Empêche d'en crafter une de plus. Mettre 0 pour désactiver."
 CFG_MACELIMIT_EC: "Pas d'Ender Chest|Bloque le fait de ranger une mace dans un Coffre de l'Ender."
 CFG_AUTOUPDATE_FETCH: "Auto Updater|Vérifier automatiquement pour une nouvelle mise à jour quotidiennement."
 CFG_AUTOUPDATE_DOWNLOAD: "Téléchargement automatique|Télécharger automatiquement la mise à jour et proposer un redémarrage du serveur."

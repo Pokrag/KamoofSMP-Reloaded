@@ -2,6 +2,7 @@ package im.ghosty.kamoof.commands;
 
 import im.ghosty.kamoof.KamoofPlugin;
 import im.ghosty.kamoof.api.KamoofSMP;
+import im.ghosty.kamoof.features.disguise.DisguiseManager;
 import im.ghosty.kamoof.features.other.JoinMessages;
 import im.ghosty.kamoof.features.other.UpdateChecker;
 import im.ghosty.kamoof.features.ritual.*;
@@ -68,6 +69,14 @@ public final class KamoofCMD implements CommandExecutor, TabCompleter {
 			}
 			case "config": {
 				player.openInventory(ConfigGUI.getMainMenu().getInventory());
+				return true;
+			}
+			case "menu": {
+				if (args.length >= 2 && args[1].equalsIgnoreCase("chat")) {
+					sendActionsChat(player);
+					return true;
+				}
+				player.openInventory(ConfigGUI.getActionsMenu(player).getInventory());
 				return true;
 			}
 			case "givehead": {
@@ -163,13 +172,21 @@ public final class KamoofCMD implements CommandExecutor, TabCompleter {
 				Message.send(player, Lang.PREFIX + (val ? "<b><white>DEBUG MODE!! :3" : "<red>Debug Mode disabled."));
 				return true;
 			}
+			case "fakemsg": {
+				if (args.length < 3)
+					return true;
+				boolean self = args[1].equalsIgnoreCase("self") || args[1].equalsIgnoreCase("a");
+				boolean join = args[2].equalsIgnoreCase("join") || args[2].equalsIgnoreCase("connect");
+				DisguiseManager.broadcastFake(player, self, join);
+				return true;
+			}
 			default: {
 				return showArgs(player);
 			}
 		}
 	}
 	
-	private static final List<String> validArgs = Arrays.asList("info", "config", "reload", "update", "setup", "givehead", "undisguise"),
+	private static final List<String> validArgs = Arrays.asList("info", "config", "menu", "reload", "update", "setup", "givehead", "undisguise"),
 		devArgs = new ArrayList<>(validArgs);
 	
 	static {
@@ -205,6 +222,37 @@ public final class KamoofCMD implements CommandExecutor, TabCompleter {
 			}
 		}
 		return List.of();
+	}
+	
+	/**
+	 * Envoie, dans le chat, les mêmes actions que {@link ConfigGUI#getActionsMenu(Player)} :
+	 * le retrait du déguisement et les quatre faux messages de connexion/déconnexion.
+	 *
+	 * @param player La cible
+	 */
+	private void sendActionsChat(Player player) {
+		String a = KamoofSMP.getInstance().getName(player);
+		if (a == null || a.isEmpty())
+			a = "?";
+		String nickname = DisguiseManager.getNickname(player);
+		String b = (nickname == null || nickname.isEmpty()) ? "?" : nickname;
+		String hover = Lang.get("MENU_CHAT_HOVER");
+		
+		StringBuilder message = new StringBuilder(Lang.get("MENU_CHAT_HEADER"));
+		message.append(chatButton("/undisguise", hover, title("MENU_UNDISGUISE")));
+		message.append(chatButton("/kamoofsmp fakemsg self leave", hover, String.format(title("MENU_FAKE_SELF_DISCONNECT"), a)));
+		message.append(chatButton("/kamoofsmp fakemsg nick join", hover, String.format(title("MENU_FAKE_NICK_CONNECT"), b)));
+		message.append(chatButton("/kamoofsmp fakemsg self join", hover, String.format(title("MENU_FAKE_SELF_CONNECT"), a)));
+		message.append(chatButton("/kamoofsmp fakemsg nick leave", hover, String.format(title("MENU_FAKE_NICK_DISCONNECT"), b)));
+		Message.send(player, message.toString());
+	}
+	
+	private static String chatButton(String command, String hover, String label) {
+		return String.format("<br><click:run_command:'%s'><hover:show_text:\"%s\"><white>[%s]</hover></click>", command, hover, label);
+	}
+	
+	private static String title(String key) {
+		return Lang.get(key).split("\\|", 2)[0];
 	}
 	
 	public HashMap<String, String> getDisguised() {

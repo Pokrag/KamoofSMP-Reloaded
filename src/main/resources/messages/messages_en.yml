@@ -98,3 +98,16 @@ CFG_MACELIMIT_INVENTORY: "Maces per Inventory|The maximum number of maces a play
 CFG_MACELIMIT_EC: "No Ender Chest|Disallow putting the mace in an Ender Chest."
 CFG_AUTOUPDATE_FETCH: "Auto Updater|Automatically check for new updates daily."
 CFG_AUTOUPDATE_DOWNLOAD: "Automatic Download|Automatically download the update and offer a server restart."
+
+# Actions menu (/camouf menu)
+MENU_TITLE: "Disguise Actions"
+MENU_UNDISGUISE: "Remove my Disguise|Removes your disguise (equivalent of /undisguise).|You'll get back your disguise head if the option is enabled."
+MENU_FAKE_SELF_DISCONNECT: "A (%s) left the game|Broadcasts a fake disconnect message using your REAL name (A).|Useful to make others believe you left."
+MENU_FAKE_NICK_CONNECT: "B (%s) joined the game|Broadcasts a fake join message using your DISGUISE name (B).|Useful to make others believe the impersonated player just arrived."
+MENU_FAKE_SELF_CONNECT: "A (%s) joined the game|Broadcasts a fake join message using your REAL name (A).|Useful after removing a disguise."
+MENU_FAKE_NICK_DISCONNECT: "B (%s) left the game|Broadcasts a fake disconnect message using your DISGUISE name (B).|Useful after removing a disguise."
+MENU_FAKE_NODISGUISE: "%PREFIX%<red>You don't have an active disguise."
+MENU_CHAT_HEADER: "<yellow><b>Disguise Actions:<reset>"
+MENU_CHAT_HOVER: "Click to run this action"
+FAKE_CONNECT: "<yellow>%s <green>joined the game"
+FAKE_DISCONNECT: "<yellow>%s <red>left the game"

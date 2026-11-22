@@ -98,3 +98,16 @@ CFG_MACELIMIT_INVENTORY: "Maces par Inventaire|Le nombre maximum de maces qu'un 
 CFG_MACELIMIT_EC: "Pas d'Ender Chest|Bloque le fait de ranger une mace dans un Coffre de l'Ender."
 CFG_AUTOUPDATE_FETCH: "Auto Updater|Vérifier automatiquement pour une nouvelle mise à jour quotidiennement."
 CFG_AUTOUPDATE_DOWNLOAD: "Téléchargement automatique|Télécharger automatiquement la mise à jour et proposer un redémarrage du serveur."
+
+# Menu des actions (/camouf menu)
+MENU_TITLE: "Actions de Déguisement"
+MENU_UNDISGUISE: "Retirer mon Déguisement|Retire ton déguisement (équivalent de /undisguise).|Tu récupéreras la tête de ton déguisement si l'option est activée."
+MENU_FAKE_SELF_DISCONNECT: "A (%s) s'est déconnecté|Diffuse dans le chat un faux message de déconnexion avec ton VRAI pseudo (A).|Utile pour faire croire que tu es parti."
+MENU_FAKE_NICK_CONNECT: "B (%s) s'est connecté|Diffuse dans le chat un faux message de connexion avec le pseudo de ton DÉGUISEMENT (B).|Utile pour faire croire que la personne imitée vient d'arriver."
+MENU_FAKE_SELF_CONNECT: "A (%s) s'est connecté|Diffuse dans le chat un faux message de connexion avec ton VRAI pseudo (A).|Utile après avoir retiré un déguisement."
+MENU_FAKE_NICK_DISCONNECT: "B (%s) s'est déconnecté|Diffuse dans le chat un faux message de déconnexion avec le pseudo de ton DÉGUISEMENT (B).|Utile après avoir retiré un déguisement."
+MENU_FAKE_NODISGUISE: "%PREFIX%<red>Tu n'as pas de déguisement en cours."
+MENU_CHAT_HEADER: "<yellow><b>Actions de Déguisement:<reset>"
+MENU_CHAT_HOVER: "Clique pour exécuter cette action"
+FAKE_CONNECT: "<yellow>%s <green>a rejoint la partie"
+FAKE_DISCONNECT: "<yellow>%s <red>a quitté la partie"

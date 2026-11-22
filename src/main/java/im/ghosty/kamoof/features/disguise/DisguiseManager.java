@@ -4,6 +4,8 @@ import com.earth2me.essentials.Essentials;
 import com.earth2me.essentials.User;
 import im.ghosty.kamoof.KamoofPlugin;
 import im.ghosty.kamoof.api.KamoofSMP;
+import im.ghosty.kamoof.utils.Lang;
+import im.ghosty.kamoof.utils.Message;
 import im.ghosty.kamoof.utils.MinecraftAPI;
 import lombok.experimental.UtilityClass;
 import net.kyori.adventure.text.Component;
@@ -90,6 +92,39 @@ public final class DisguiseManager {
 		
 		clearNickname(player);
 		clearSkin(player);
+	}
+	
+	/**
+	 * Diffuse un faux message de connexion ou de déconnexion, afin de renforcer l'illusion
+	 * d'un déguisement (p. ex. faire croire que le joueur déguisé a quitté le serveur, puis que
+	 * le pseudo imité l'a rejoint).
+	 *
+	 * @param player La cible
+	 * @param self   <code>true</code> pour utiliser le vrai pseudo (A), <code>false</code> pour le déguisement (B)
+	 * @param join   <code>true</code> pour un message de connexion, <code>false</code> pour une déconnexion
+	 */
+	public static void broadcastFake(Player player, boolean self, boolean join) {
+		String name = self ? KamoofSMP.getInstance().getName(player) : getNickname(player);
+		if (name == null || name.isEmpty()) {
+			Lang.send(player, "MENU_FAKE_NODISGUISE");
+			return;
+		}
+		broadcastFake(name, join);
+	}
+	
+	/**
+	 * Diffuse un faux message de connexion ou de déconnexion pour le pseudo donné.
+	 *
+	 * @param name Le pseudo à afficher
+	 * @param join <code>true</code> pour un message de connexion, <code>false</code> pour une déconnexion
+	 */
+	public static void broadcastFake(String name, boolean join) {
+		if (name == null || name.isEmpty())
+			return;
+		Component message = Message.deserialize(String.format(Lang.get(join ? "FAKE_CONNECT" : "FAKE_DISCONNECT"), name));
+		for (Player viewer : Bukkit.getOnlinePlayers())
+			viewer.sendMessage(message);
+		Bukkit.getConsoleSender().sendMessage(message);
 	}
 	
 	// ---------------------------------------------------------------------

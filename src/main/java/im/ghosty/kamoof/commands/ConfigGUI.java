@@ -3,7 +3,9 @@ package im.ghosty.kamoof.commands;
 import com.samjakob.spigui.buttons.SGButton;
 import com.samjakob.spigui.menu.SGMenu;
 import im.ghosty.kamoof.KamoofPlugin;
+import im.ghosty.kamoof.api.KamoofSMP;
 import im.ghosty.kamoof.features.FeatureManager;
+import im.ghosty.kamoof.features.disguise.DisguiseManager;
 import im.ghosty.kamoof.utils.*;
 import net.wesjd.anvilgui.AnvilGUI;
 import org.bukkit.*;
@@ -178,6 +180,84 @@ public final class ConfigGUI {
 		setButtonBool(menu, 16, "autoupdate.download", getStrings("CFG_AUTOUPDATE_DOWNLOAD"));
 		
 		return menu;
+	}
+	
+	/**
+	 * @param player Le joueur qui ouvre le menu (sert à résoudre les pseudos A et B)
+	 * @return Le {@link SGMenu} des actions de déguisement : retrait du déguisement et
+	 * faux messages de connexion/déconnexion autour du bouton central.
+	 */
+	public static SGMenu getActionsMenu(Player player) {
+		SGMenu menu = KamoofPlugin.getSpiGUI().create("§a§l" + Lang.get("MENU_TITLE"), 3);
+		fill(menu, Material.BLACK_STAINED_GLASS_PANE);
+		
+		setButtonMainMenu(menu, 4);
+		
+		String self = KamoofSMP.getInstance().getName(player);
+		String nick = DisguiseManager.getNickname(player);
+		
+		setButtonFake(menu, 10, "MENU_FAKE_SELF_DISCONNECT", self, true, false);
+		setButtonFake(menu, 11, "MENU_FAKE_NICK_CONNECT", nick, false, true);
+		setButtonUndisguise(menu, 12);
+		setButtonFake(menu, 13, "MENU_FAKE_SELF_CONNECT", self, true, true);
+		setButtonFake(menu, 14, "MENU_FAKE_NICK_DISCONNECT", nick, false, false);
+		
+		return menu;
+	}
+	
+	/**
+	 * Ajoute un bouton diffusant un faux message de connexion/déconnexion.
+	 *
+	 * @param menu Le menu à modifier
+	 * @param slot Le slot où placer l'item
+	 * @param key  La clé de langue (titre|lore, avec <code>%s</code> pour le pseudo affiché)
+	 * @param name Le pseudo à afficher (A ou B), ou <code>null</code> si inconnu
+	 * @param self <code>true</code> pour le vrai pseudo (A), <code>false</code> pour le déguisement (B)
+	 * @param join <code>true</code> pour un message de connexion, <code>false</code> pour une déconnexion
+	 */
+	private static void setButtonFake(SGMenu menu, int slot, String key, String name, boolean self, boolean join) {
+		Duo<String, ArrayList<String>> strings = getStrings(key);
+		String label = (name == null || name.isEmpty()) ? "?" : name;
+		
+		ItemStack item = new ItemStack(join ? Material.LIME_DYE : Material.GRAY_DYE);
+		ItemMeta meta = item.getItemMeta();
+		meta.addItemFlags(ItemFlag.values());
+		meta.setDisplayName((join ? "§a§l" : "§c§l") + strings.getA().replace("%s", label));
+		ArrayList<String> lore = new ArrayList<>();
+		for (String line : strings.getB())
+			lore.add(line.replace("%s", label));
+		meta.setLore(lore);
+		item.setItemMeta(meta);
+		
+		menu.setButton(slot, new SGButton(item).withListener(event -> {
+			if (!(event.getWhoClicked() instanceof Player clicker))
+				return;
+			clicker.closeInventory();
+			DisguiseManager.broadcastFake(clicker, self, join);
+		}));
+	}
+	
+	/**
+	 * Ajoute le bouton de retrait du déguisement (équivalent de <code>/undisguise</code>).
+	 *
+	 * @param menu Le menu à modifier
+	 * @param slot Le slot où placer l'item
+	 */
+	private static void setButtonUndisguise(SGMenu menu, int slot) {
+		Duo<String, ArrayList<String>> strings = getStrings("MENU_UNDISGUISE");
+		ItemStack item = new ItemStack(Material.PLAYER_HEAD);
+		ItemMeta meta = item.getItemMeta();
+		meta.addItemFlags(ItemFlag.values());
+		meta.setDisplayName("§c§l" + strings.getA());
+		meta.setLore(strings.getB());
+		item.setItemMeta(meta);
+		
+		menu.setButton(slot, new SGButton(item).withListener(event -> {
+			if (!(event.getWhoClicked() instanceof Player player))
+				return;
+			player.closeInventory();
+			player.performCommand("undisguise");
+		}));
 	}
 	
 	/**

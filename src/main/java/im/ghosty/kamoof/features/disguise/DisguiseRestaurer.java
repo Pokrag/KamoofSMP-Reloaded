@@ -1,7 +1,6 @@
 package im.ghosty.kamoof.features.disguise;
 
 import im.ghosty.kamoof.KamoofPlugin;
-import im.ghosty.kamoof.api.KamoofSMP;
 import im.ghosty.kamoof.features.Feature;
 import im.ghosty.kamoof.utils.Message;
 import org.bukkit.Bukkit;
@@ -9,6 +8,7 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.*;
 import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 import java.util.*;
@@ -67,7 +67,7 @@ public final class DisguiseRestaurer extends Feature {
 				if (disguise != null) {
 					set(player.getUniqueId(), null);
 					if (!name.equalsIgnoreCase(disguise))
-						KamoofSMP.getInstance().disguise(player, disguise);
+						DisguiseManager.apply(player, disguise);
 				}
 			});
 			saveData();
@@ -91,6 +91,20 @@ public final class DisguiseRestaurer extends Feature {
 		saveData();
 	}
 	
+	/**
+	 * Pré-enregistre le pseudo déguisé <b>dès le login</b>, avant que le serveur n'envoie
+	 * les paquets <code>PLAYER_INFO</code> (qui portent le pseudo affiché au-dessus de la
+	 * tête) aux autres joueurs. Sans cela, les autres joueurs verraient le vrai pseudo
+	 * jusqu'à ce qu'un rafraîchissement survienne.
+	 */
+	@EventHandler(priority = EventPriority.LOWEST)
+	public void onLogin(PlayerLoginEvent event) {
+		UUID uuid = event.getPlayer().getUniqueId();
+		String disguise = get(uuid);
+		if (disguise != null)
+			NametagManager.setNickname(uuid, disguise);
+	}
+	
 	@EventHandler(priority = EventPriority.HIGH)
 	public void onJoin(PlayerJoinEvent event) {
 		Player player = event.getPlayer();
@@ -100,7 +114,9 @@ public final class DisguiseRestaurer extends Feature {
 		if (disguise == null)
 			return;
 		set(uuid, null);
-		DisguiseManager.disguise(player, disguise);
+		// Ré-application forcée : pseudos (tab-list + nametag) ET skin, même si
+		// EssentialsX / SkinsRestorer ont déjà mémorisé une partie de l'état.
+		DisguiseManager.apply(player, disguise);
 		
 		labelJoinMessage:
 		{

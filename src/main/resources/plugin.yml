@@ -5,7 +5,7 @@ api-version: 1.20
 description: Reproduction du KamoofSMP Saison 2 de Sohran (portage Paper 26.3 - KamoofSMP Reloaded)
 website: https://github.com/Pokrag/KamoofSMP-Reloaded
 main: im.ghosty.kamoof.KamoofPlugin
-softdepend: [ Essentials, SkinsRestorer ]
+softdepend: [ Essentials, SkinsRestorer, packetevents ]
 commands:
   kamoofsmp:
     description: Commande globale du KamoofSMP

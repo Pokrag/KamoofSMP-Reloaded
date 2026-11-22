@@ -53,6 +53,25 @@ public final class DisguiseManager {
 			return;
 		}
 		
+		apply(player, name);
+	}
+	
+	/**
+	 * Applique (ou <b>ré-applique</b>) le déguisement <b>sans aucun court-circuit</b>.
+	 * <p>
+	 * Contrairement à {@link #disguise(Player, String)}, cette méthode force la
+	 * ré-application du pseudo (tab-list <b>et</b> nametag au-dessus de la tête) et du
+	 * skin, même si EssentialsX / SkinsRestorer ont déjà mémorisé une partie de l'état.
+	 * Elle est donc utilisée à la reconnexion d'un joueur déguisé.
+	 *
+	 * @param player La cible
+	 * @param name   Le déguisement
+	 */
+	public static void apply(Player player, String name) {
+		if (name == null || name.isEmpty()) {
+			undisguise(player);
+			return;
+		}
 		applyNickname(player, name);
 		applySkin(player, name);
 	}
@@ -110,7 +129,11 @@ public final class DisguiseManager {
 		if (!player.isOnline())
 			return;
 		
-		// 2) On force l'affichage (TAB + nametag) si EssentialsX ne l'a pas fait.
+		// 2) Le pseudo au-dessus de la tête : EssentialsX ne le modifie JAMAIS, il faut
+		//    réécrire nous-mêmes le GameProfile des paquets PLAYER_INFO (via PacketEvents).
+		NametagManager.setNickname(player.getUniqueId(), name);
+		
+		// 3) On force l'affichage (TAB) si EssentialsX ne l'a pas fait.
 		//    Par défaut, EssentialsX ne modifie PAS la tab-list (change-playerlist: false),
 		//    ce qui provoquait l'absence du pseudo dans le menu TAB.
 		forceDisplayIfMissing(player, name);
@@ -128,7 +151,8 @@ public final class DisguiseManager {
 		if (!player.isOnline())
 			return;
 		
-		// on remet le vrai nom si EssentialsX ne l'a pas restauré
+		// on remet le vrai nom au-dessus de la tête, puis dans la tab-list si nécessaire
+		NametagManager.setNickname(player.getUniqueId(), null);
 		forceDisplayIfMissing(player, player.getName());
 	}
 	

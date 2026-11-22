@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "im.ghosty.kamoof"
-version = "1.0"
+version = "1.0a"
 
 repositories {
     mavenCentral()
@@ -34,6 +34,11 @@ dependencies {
 
     compileOnly("net.essentialsx:EssentialsX:2.21.2") { isTransitive = false }
     compileOnly("net.skinsrestorer:skinsrestorer-api:15.12.6") { isTransitive = false }
+
+    // PacketEvents : utilisé en mode « pre-built » (le plugin PacketEvents doit être installé
+    // sur le serveur, cf. plugin.yml). Permet de réécrire le pseudo affiché AU-DESSUS DE LA
+    // TÊTE (paquet PLAYER_INFO), ce qu'EssentialsX ne fait pas. Non embarqué (compileOnly).
+    compileOnly("com.github.retrooper:packetevents-spigot:2.14.0")
 //    implementation("com.samjakob:SpiGUI:v1.4.1")
     implementation(mapOf("name" to "SpiGUI-v2-2.0.0", "ext" to "jar"))
     implementation("net.wesjd:anvilgui:1.10.12-SNAPSHOT")

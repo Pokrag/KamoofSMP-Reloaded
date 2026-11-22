@@ -4,6 +4,7 @@ import im.ghosty.kamoof.commands.*;
 import im.ghosty.kamoof.features.FeatureManager;
 import im.ghosty.kamoof.features.disguise.DisguiseListener;
 import im.ghosty.kamoof.features.disguise.DisguiseRestaurer;
+import im.ghosty.kamoof.features.disguise.NametagManager;
 import im.ghosty.kamoof.features.drophead.HeadDropper;
 import im.ghosty.kamoof.features.macelimiter.MaceLimiter;
 import im.ghosty.kamoof.features.macelimiter.MaceNoEnderChest;
@@ -87,6 +88,9 @@ public final class KamoofPlugin extends JavaPlugin {
 			new UpdateChecker(), new JoinMessages()
 		);
 		
+		// Réécriture du pseudo au-dessus de la tête via PacketEvents (inerte si absent).
+		NametagManager.init();
+		
 		registerCommand("kamoofsmp", new KamoofCMD());
 		registerCommand("givehead", new GiveHeadCMD());
 		registerCommand("myhead", new HeadCMD());
@@ -100,6 +104,7 @@ public final class KamoofPlugin extends JavaPlugin {
 	@Override
 	public void onDisable() {
 		super.onDisable();
+		NametagManager.disable();
 		FeatureManager.disable();
 		if (metrics != null)
 			metrics.shutdown();

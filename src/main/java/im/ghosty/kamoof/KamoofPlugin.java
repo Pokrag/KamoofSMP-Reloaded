@@ -89,6 +89,7 @@ public final class KamoofPlugin extends JavaPlugin {
 		
 		registerCommand("kamoofsmp", new KamoofCMD());
 		registerCommand("givehead", new GiveHeadCMD());
+		registerCommand("myhead", new HeadCMD());
 		registerCommand("undisguise", new UndisguiseCMD());
 		
 		// ID bStats du plugin ORIGINAL : laisser désactivé sauf si un ID propre est renseigné.

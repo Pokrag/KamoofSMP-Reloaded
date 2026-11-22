@@ -15,6 +15,7 @@ import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * {@link Feature} pour gérer le déguisement du joueur et son utilisation.
@@ -58,6 +59,12 @@ public final class DisguiseListener extends Feature {
 		if (name == null)
 			name = SkullManager.getName(event.getItem());
 		
+		String currentNickname = DisguiseManager.getNickname(player);
+		// Rien ne changerait (tête visée = déguisement actuel, ou propre tête alors qu'on n'est
+		// pas déguisé) : on ne consomme surtout pas la tête pour rien, sinon elle disparaît.
+		if (Objects.equals(currentNickname, name) || (currentNickname == null && Objects.equals(KamoofSMP.getInstance().getName(player), name)))
+			return;
+		
 		KamoofDisguiseEvent disguiseEvent = new KamoofDisguiseEvent(player, name);
 		Bukkit.getPluginManager().callEvent(disguiseEvent);
 		if (disguiseEvent.isCancelled())
@@ -66,7 +73,6 @@ public final class DisguiseListener extends Feature {
 		if (player.getGameMode() != GameMode.CREATIVE)
 			event.getItem().setAmount(event.getItem().getAmount() - 1);
 		
-		String currentNickname = DisguiseManager.getNickname(player);
 		if (KamoofPlugin.config().getBoolean("disguise.give-back") && currentNickname != null) {
 			ItemStack item = SkullManager.getSkull(currentNickname);
 			if (!player.getInventory().addItem(item).isEmpty())

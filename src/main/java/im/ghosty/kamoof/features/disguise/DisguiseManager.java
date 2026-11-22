@@ -133,9 +133,11 @@ public final class DisguiseManager {
 	}
 	
 	/**
-	 * Si la tab-list n'affiche pas encore le nom voulu (c'est-à-dire qu'EssentialsX ne l'a
-	 * pas modifiée, car <code>change-playerlist</code> est désactivé par défaut), on force
-	 * l'affichage. Sinon on conserve ce qu'EssentialsX a appliqué (préfixe/suffixe compris).
+	 * Force l'affichage du pseudo déguisé sur les deux affichages gérés <b>séparément</b> par
+	 * EssentialsX : le <b>menu TAB</b> (<code>playerListName</code>, option <code>change-playerlist</code>)
+	 * et le <b>nametag au-dessus de la tête</b> (<code>displayName</code>, option <code>change-displayname</code>).
+	 * On ne touche à chacun que si EssentialsX ne l'a pas déjà fait, afin de conserver ses
+	 * cosmétiques (préfixe/suffixe).
 	 *
 	 * @param player La cible
 	 * @param name   Le nom à afficher
@@ -144,13 +146,23 @@ public final class DisguiseManager {
 		if (!player.isOnline())
 			return;
 		
-		Component current = player.playerListName();
-		String plain = current == null ? "" : LegacyComponentSerializer.legacySection().serialize(current);
-		if (plain.contains(name))
-			return; // EssentialsX (ou un autre plugin) a déjà affiché le bon nom, cosmétiques inclus
+		// menu TAB
+		if (!displayed(player.playerListName(), name))
+			player.playerListName(Component.text(name));
 		
-		player.playerListName(Component.text(name));
-		player.displayName(Component.text(name));
+		// nametag au-dessus de la tête
+		if (!displayed(player.displayName(), name))
+			player.displayName(Component.text(name));
+	}
+	
+	/**
+	 * @param component Le texte actuellement affiché
+	 * @param name      Le nom voulu
+	 * @return <code>true</code> si le texte affiché contient déjà le nom voulu (cosmétiques inclus)
+	 */
+	private static boolean displayed(Component component, String name) {
+		String plain = component == null ? "" : LegacyComponentSerializer.legacySection().serialize(component);
+		return plain.contains(name);
 	}
 	
 	// ---------------------------------------------------------------------

@@ -13,8 +13,14 @@ commands:
   givehead:
     description: Se donner n'importe quelle tête
     permission: kamoofsmp.admin
+  myhead:
+    description: Obtenir sa propre tête
+    permission: kamoofsmp.head
   undisguise:
     description: Retirer son déguisement
 permissions:
   kamoofsmp.admin:
     description: Administrateur du serveur
+  kamoofsmp.head:
+    description: Permet d'obtenir sa propre tête avec /myhead
+    default: op

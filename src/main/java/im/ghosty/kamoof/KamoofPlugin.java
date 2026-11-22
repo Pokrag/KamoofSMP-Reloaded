@@ -80,12 +80,16 @@ public final class KamoofPlugin extends JavaPlugin {
 			log(Lang.get("DATA_FILE_FAILED"));
 		}
 		
+		// Passerelle Vault (inerte si Vault/l'économie est absent) : nécessaire à la Trousse du Menteur.
+		EconomyHook.init();
+		
 		FeatureManager.add(
 			new DisguiseRestaurer(), new DisguiseListener(),
 			new RitualSetup(), new RitualListener(),
 			new HeadDropper(),
 			new MaceLimiter(), new MaceNoEnderChest(),
-			new UpdateChecker(), new JoinMessages()
+			new UpdateChecker(), new JoinMessages(),
+			new LiarKit()
 		);
 		
 		// Réécriture du pseudo au-dessus de la tête via PacketEvents (inerte si absent).

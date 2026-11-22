@@ -6,6 +6,7 @@ import im.ghosty.kamoof.KamoofPlugin;
 import im.ghosty.kamoof.api.KamoofSMP;
 import im.ghosty.kamoof.features.FeatureManager;
 import im.ghosty.kamoof.features.disguise.DisguiseManager;
+import im.ghosty.kamoof.features.other.LiarKit;
 import im.ghosty.kamoof.utils.*;
 import net.wesjd.anvilgui.AnvilGUI;
 import org.bukkit.*;
@@ -15,6 +16,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
@@ -202,7 +204,106 @@ public final class ConfigGUI {
 		setButtonFake(menu, 14, "MENU_FAKE_SELF_CONNECT", self, true, true);
 		setButtonFake(menu, 15, "MENU_FAKE_NICK_DISCONNECT", nick, false, false);
 		
+		setButtonLiarKit(menu, 22);
+		
 		return menu;
+	}
+	
+	/**
+	 * @param player Le joueur qui ouvre le menu
+	 * @return Le {@link SGMenu} de la <b>Trousse du Menteur</b> : actions payantes (via Vault)
+	 * permettant de tromper les autres joueurs.
+	 */
+	public static SGMenu getLiarKitMenu(Player player) {
+		SGMenu menu = KamoofPlugin.getSpiGUI().create("§a§l" + Lang.get("LIARKIT_TITLE"), 3);
+		fill(menu, Material.BLACK_STAINED_GLASS_PANE);
+		
+		setButtonActionsMenu(menu, 4);
+		
+		LiarKit kit = LiarKit.getInstance();
+		String balance = kit.balanceLabel(player);
+		String anonymousDuration = LiarKit.durationLabel(kit.anonymousDuration());
+		String tabDuration = LiarKit.durationLabel(kit.tabDuration());
+		
+		setButtonLiar(menu, 10, Material.PLAYER_HEAD, "LIARKIT_BTN_ANONYMOUS", anonymousDuration, kit.priceLabel("anonymous"), balance, kit::buyAnonymous);
+		setButtonLiar(menu, 12, Material.ENDER_EYE, "LIARKIT_BTN_TAB", tabDuration, kit.priceLabel("tab"), balance, kit::buyTabVanish);
+		setButtonLiar(menu, 14, Material.LIME_DYE, "LIARKIT_BTN_FAKE_JOIN", "", kit.priceLabel("fake-join"), balance, clicker -> kit.fakeMessage(clicker, true));
+		setButtonLiar(menu, 16, Material.GRAY_DYE, "LIARKIT_BTN_FAKE_QUIT", "", kit.priceLabel("fake-quit"), balance, clicker -> kit.fakeMessage(clicker, false));
+		
+		return menu;
+	}
+	
+	/**
+	 * Ajoute le bouton d'accès à la Trousse du Menteur.
+	 *
+	 * @param menu Le menu à modifier
+	 * @param slot Le slot où placer l'item
+	 */
+	private static void setButtonLiarKit(SGMenu menu, int slot) {
+		Duo<String, ArrayList<String>> strings = getStrings("MENU_LIARKIT");
+		ItemStack item = new ItemStack(Material.ENDER_EYE);
+		ItemMeta meta = item.getItemMeta();
+		meta.addItemFlags(ItemFlag.values());
+		meta.setDisplayName("§d§l" + strings.getA());
+		meta.setLore(strings.getB());
+		item.setItemMeta(meta);
+		menu.setButton(slot, new SGButton(item).withListener(event -> {
+			if (event.getWhoClicked() instanceof Player player)
+				player.openInventory(getLiarKitMenu(player).getInventory());
+		}));
+	}
+	
+	/**
+	 * Ajoute un bouton d'action payante de la Trousse du Menteur, affichant son prix et le solde
+	 * du joueur.
+	 *
+	 * @param menu     Le menu à modifier
+	 * @param slot     Le slot où placer l'item
+	 * @param material Le matériel de l'icône
+	 * @param key      La clé de langue (titre|lore, avec <code>%duration%</code>/<code>%price%</code>/<code>%balance%</code>)
+	 * @param duration La durée formatée (peut être vide)
+	 * @param price    Le prix formaté
+	 * @param balance  Le solde formaté
+	 * @param action   L'action exécutée au clic
+	 */
+	private static void setButtonLiar(SGMenu menu, int slot, Material material, String key, String duration, String price, String balance, Consumer<Player> action) {
+		Duo<String, ArrayList<String>> strings = getStrings(key);
+		ItemStack item = new ItemStack(material);
+		ItemMeta meta = item.getItemMeta();
+		meta.addItemFlags(ItemFlag.values());
+		meta.setDisplayName("§d§l" + strings.getA());
+		ArrayList<String> lore = new ArrayList<>();
+		for (String line : strings.getB())
+			lore.add(line
+				.replace("%duration%", duration)
+				.replace("%price%", price)
+				.replace("%balance%", balance));
+		meta.setLore(lore);
+		item.setItemMeta(meta);
+		menu.setButton(slot, new SGButton(item).withListener(event -> {
+			if (!(event.getWhoClicked() instanceof Player clicker))
+				return;
+			clicker.closeInventory();
+			action.accept(clicker);
+		}));
+	}
+	
+	/**
+	 * Ajoute un bouton de retour vers le menu des actions.
+	 *
+	 * @param menu Le menu à modifier
+	 * @param slot Le slot où placer l'item
+	 */
+	private static void setButtonActionsMenu(SGMenu menu, int slot) {
+		ItemStack item = new ItemStack(Material.ARROW);
+		ItemMeta meta = item.getItemMeta();
+		meta.addItemFlags(ItemFlag.values());
+		meta.setDisplayName("§7" + Lang.get("CFG_GO_BACK"));
+		item.setItemMeta(meta);
+		menu.setButton(slot, new SGButton(item).withListener(event -> {
+			if (event.getWhoClicked() instanceof Player player)
+				player.openInventory(getActionsMenu(player).getInventory());
+		}));
 	}
 	
 	/**

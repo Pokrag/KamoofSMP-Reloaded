@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "im.ghosty.kamoof"
-version = "1.1e"
+version = "1.2"
 
 repositories {
     mavenCentral()
@@ -34,6 +34,10 @@ dependencies {
 
     compileOnly("net.essentialsx:EssentialsX:2.21.2") { isTransitive = false }
     compileOnly("net.skinsrestorer:skinsrestorer-api:15.12.6") { isTransitive = false }
+
+    // Vault : utilisé en mode « pre-built » pour les actions payantes de la Trousse du Menteur
+    // (le plugin Vault + un plugin d'économie doivent être installés sur le serveur, cf. plugin.yml).
+    compileOnly("com.github.MilkBowl:VaultAPI:1.7") { isTransitive = false }
 
     // PacketEvents : utilisé en mode « pre-built » (le plugin PacketEvents doit être installé
     // sur le serveur, cf. plugin.yml). Permet de réécrire le pseudo affiché AU-DESSUS DE LA

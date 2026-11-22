@@ -161,6 +161,26 @@ macelimiter:
   no-enderchest: true
 
 
+# La Trousse du Menteur : des actions payantes (via Vault) accessibles depuis /camouf menu.
+# Elles permettent de tromper les autres joueurs en dépensant de l'argent.
+# Nécessite Vault + un plugin d'économie. PacketEvents est requis pour la disparition du TAB.
+liarkit:
+  # Activer la Trousse du Menteur
+  enabled: true
+  # Le pseudo affiché durant le mode anonyme
+  anonymous-name: "Anonymous"
+  # Durée (en secondes) du mode anonyme
+  anonymous-duration: 60
+  # Durée (en secondes) de la disparition de la liste des joueurs (TAB)
+  tab-duration: 60
+  # Les prix de chaque action (0 = gratuit)
+  prices:
+    anonymous: 500.0
+    tab: 300.0
+    fake-join: 150.0
+    fake-quit: 150.0
+
+
 # Ceci ne change pas avec le paramètre language, et doit être modifié manuellement
 # Ils utilisent MiniMessage
 # Laissez vide pour ne pas les utiliser

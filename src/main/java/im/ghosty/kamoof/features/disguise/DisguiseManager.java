@@ -245,6 +245,31 @@ public final class DisguiseManager {
 	}
 	
 	/**
+	 * Applique un pseudo au joueur <b>sans toucher à son skin</b> (utilisé par la Trousse du
+	 * Menteur pour le mode anonyme). Le pseudo est posé via EssentialsX et l'affichage
+	 * (TAB / nametag) est forcé comme pour un déguisement classique.
+	 *
+	 * @param player La cible
+	 * @param name   Le nouveau pseudo
+	 */
+	public static void applyName(Player player, String name) {
+		if (name == null || name.isEmpty()) {
+			clearName(player);
+			return;
+		}
+		applyNickname(player, name);
+	}
+	
+	/**
+	 * Retire le pseudo du joueur (retour à son vrai pseudo) <b>sans toucher à son skin</b>.
+	 *
+	 * @param player La cible
+	 */
+	public static void clearName(Player player) {
+		clearNickname(player);
+	}
+	
+	/**
 	 * @return L'utilisateur EssentialsX du joueur, ou <code>null</code> si EssentialsX est absent.
 	 */
 	private static User essentialsUser(Player player) {

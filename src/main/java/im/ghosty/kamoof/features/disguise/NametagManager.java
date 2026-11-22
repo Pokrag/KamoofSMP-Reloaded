@@ -52,6 +52,8 @@ public final class NametagManager {
 	private static final Map<UUID, UserProfile> PROFILES = new ConcurrentHashMap<>();
 	/** Joueurs pour lesquels un cycle « masquer/afficher » Bedrock est en cours. */
 	private static final Set<UUID> REFRESHING = ConcurrentHashMap.newKeySet();
+	/** Joueurs masqués de la liste des joueurs (TAB) via la Trousse du Menteur. */
+	private static final Set<UUID> TAB_HIDDEN = ConcurrentHashMap.newKeySet();
 	
 	private static NametagListener listener;
 	private static boolean warned;
@@ -194,7 +196,8 @@ public final class NametagManager {
 			WrapperPlayServerPlayerInfoRemove remove = new WrapperPlayServerPlayerInfoRemove(uuid);
 			WrapperPlayServerPlayerInfoUpdate.PlayerInfo info =
 				new WrapperPlayServerPlayerInfoUpdate.PlayerInfo(profile);
-			info.setListed(true);
+			// Si le joueur est masqué du TAB (Trousse du Menteur), on préserve le masquage.
+			info.setListed(!TAB_HIDDEN.contains(uuid));
 			WrapperPlayServerPlayerInfoUpdate add = new WrapperPlayServerPlayerInfoUpdate(
 				EnumSet.of(
 					WrapperPlayServerPlayerInfoUpdate.Action.ADD_PLAYER,
@@ -272,6 +275,55 @@ public final class NametagManager {
 	}
 	
 	/**
+	 * Masque ou ré-affiche le joueur dans la <b>liste des joueurs</b> (TAB), sans toucher à son
+	 * entité en jeu ni à son pseudo. Le masquage est <b>persistant</b> : tant qu'il est actif, les
+	 * rafraîchissements de nametag ({@link #refresh(UUID)}) et l'arrivée de nouveaux spectateurs
+	 * le maintiennent hors du TAB.
+	 * <p>
+	 * L'effet repose sur l'action <code>UPDATE_LISTED</code> du paquet <code>PLAYER_INFO</code>,
+	 * seule méthode fiable en 1.20.6+ (le <code>playerListName</code> de Bukkit ne suffit plus).
+	 *
+	 * @param player La cible
+	 * @param listed <code>true</code> pour ré-afficher le joueur, <code>false</code> pour le masquer
+	 */
+	public static void setTabListed(Player player, boolean listed) {
+		if (player == null || !isAvailable())
+			return;
+		
+		if (listed)
+			TAB_HIDDEN.remove(player.getUniqueId());
+		else
+			TAB_HIDDEN.add(player.getUniqueId());
+		
+		// l'envoi de paquets doit se faire sur le thread principal
+		if (!Bukkit.isPrimaryThread()) {
+			Bukkit.getScheduler().runTask(KamoofPlugin.getInstance(), () -> setTabListed(player, listed));
+			return;
+		}
+		if (!player.isOnline())
+			return;
+		
+		try {
+			String name = NICKNAMES.get(player.getUniqueId());
+			if (name == null || name.isEmpty())
+				name = player.getName();
+			
+			WrapperPlayServerPlayerInfoUpdate.PlayerInfo info =
+				new WrapperPlayServerPlayerInfoUpdate.PlayerInfo(new UserProfile(player.getUniqueId(), name, new ArrayList<>()));
+			info.setListed(listed);
+			WrapperPlayServerPlayerInfoUpdate packet = new WrapperPlayServerPlayerInfoUpdate(
+				EnumSet.of(WrapperPlayServerPlayerInfoUpdate.Action.UPDATE_LISTED),
+				info
+			);
+			
+			for (Player viewer : Bukkit.getOnlinePlayers())
+				PacketEvents.getAPI().getPlayerManager().sendPacket(viewer, packet);
+		} catch (Throwable exc) {
+			logError("Impossible de masquer/afficher un joueur dans la liste (TAB) : " + exc);
+		}
+	}
+	
+	/**
 	 * Détermine si un joueur est un joueur <b>Bedrock</b>. La détection utilise, sans dépendance
 	 * obligatoire : le format d'UUID propre à Floodgate, l'API de Geyser, puis celle de Floodgate.
 	 *
@@ -336,35 +388,46 @@ public final class NametagManager {
 					return;
 				
 				WrapperPlayServerPlayerInfoUpdate packet = new WrapperPlayServerPlayerInfoUpdate(event);
-				// Seule l'action ADD_PLAYER transporte le nom du profil (utilisé par le nametag).
-				if (!packet.getActions().contains(WrapperPlayServerPlayerInfoUpdate.Action.ADD_PLAYER))
-					return;
+				boolean changed = false;
 				
-				if (NICKNAMES.isEmpty())
-					return;
-				
-				// On mémorise le profil complet (avec la peau/cape) des joueurs déguisés pour
-				// pouvoir le réutiliser lors d'un rafraîchissement ultérieur.
-				for (WrapperPlayServerPlayerInfoUpdate.PlayerInfo info : packet.getEntries()) {
-					UserProfile profile = info.getGameProfile();
-					if (profile != null && profile.getUUID() != null && NICKNAMES.containsKey(profile.getUUID()))
-						PROFILES.put(profile.getUUID(), profile);
+				// 1) Masquage persistant du TAB (Trousse du Menteur) : on force « non listé » pour les
+				//    joueurs masqués, y compris pour les spectateurs qui viennent de se connecter (le
+				//    serveur leur renvoie l'entrée de liste complète à l'arrivée).
+				if (!TAB_HIDDEN.isEmpty() && packet.getActions().contains(WrapperPlayServerPlayerInfoUpdate.Action.UPDATE_LISTED)) {
+					for (WrapperPlayServerPlayerInfoUpdate.PlayerInfo info : packet.getEntries()) {
+						UserProfile profile = info.getGameProfile();
+						if (profile != null && profile.getUUID() != null && TAB_HIDDEN.contains(profile.getUUID())) {
+							info.setListed(false);
+							changed = true;
+						}
+					}
 				}
 				
-				boolean changed = false;
-				for (WrapperPlayServerPlayerInfoUpdate.PlayerInfo info : packet.getEntries()) {
-					UserProfile profile = info.getGameProfile();
-					if (profile == null)
-						continue;
+				// 2) Réécriture du pseudo au-dessus de la tête : seule l'action ADD_PLAYER transporte
+				//    le nom du profil (utilisé par le nametag).
+				if (packet.getActions().contains(WrapperPlayServerPlayerInfoUpdate.Action.ADD_PLAYER) && !NICKNAMES.isEmpty()) {
+					// On mémorise le profil complet (avec la peau/cape) des joueurs déguisés pour
+					// pouvoir le réutiliser lors d'un rafraîchissement ultérieur.
+					for (WrapperPlayServerPlayerInfoUpdate.PlayerInfo info : packet.getEntries()) {
+						UserProfile profile = info.getGameProfile();
+						if (profile != null && profile.getUUID() != null && NICKNAMES.containsKey(profile.getUUID()))
+							PROFILES.put(profile.getUUID(), profile);
+					}
 					
-					String nickname = NICKNAMES.get(profile.getUUID());
-					if (nickname == null || nickname.equals(profile.getName()))
-						continue;
-					
-					// On reconstruit le profil en conservant l'UUID et les textures (peau/cape),
-					// on ne change que le nom.
-					info.setGameProfile(new UserProfile(profile.getUUID(), nickname, profile.getTextureProperties()));
-					changed = true;
+					for (WrapperPlayServerPlayerInfoUpdate.PlayerInfo info : packet.getEntries()) {
+						UserProfile profile = info.getGameProfile();
+						if (profile == null)
+							continue;
+						
+						String nickname = NICKNAMES.get(profile.getUUID());
+						if (nickname == null || nickname.equals(profile.getName()))
+							continue;
+						
+						// On reconstruit le profil en conservant l'UUID et les textures (peau/cape),
+						// on ne change que le nom.
+						info.setGameProfile(new UserProfile(profile.getUUID(), nickname, profile.getTextureProperties()));
+						changed = true;
+					}
 				}
 				
 				// Indispensable : sans cela, les modifications sont perdues.

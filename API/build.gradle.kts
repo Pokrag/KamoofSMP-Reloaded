@@ -14,7 +14,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly("io.papermc.paper:paper-api:26.3.build.257-stable")
+    compileOnly("io.papermc.paper:paper-api:26.3.build.258-stable")
 
     implementation("org.jetbrains:annotations:26.0.2")
     compileOnly("org.projectlombok:lombok:1.18.42")

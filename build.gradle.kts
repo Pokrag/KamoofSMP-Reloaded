@@ -26,7 +26,7 @@ repositories {
 dependencies {
     implementation(project(":API"))
 //    compileOnly("org.spigotmc:spigot-api:1.21.11-R0.1-SNAPSHOT")
-    compileOnly("io.papermc.paper:paper-api:26.3.build.257-stable")
+    compileOnly("io.papermc.paper:paper-api:26.3.build.259-stable")
 //    compileOnly("org.spigotmc:spigot-api:1.20.1-R0.1-SNAPSHOT")
 
     // Adventure (API, MiniMessage, serializers) est fourni par Paper 26.3 (Adventure 5.2.0) :
